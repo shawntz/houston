@@ -5,6 +5,7 @@ use std::sync::Mutex;
 
 use ring::signature::KeyPair;
 
+use crate::auth::webauthn::WebauthnState;
 use crate::config::AppConfig;
 use crate::crypto::keys::Ed25519Keypair;
 use crate::middleware::rate_limit::RateLimiter;
@@ -15,6 +16,8 @@ pub struct AppState {
     pub ed25519_keypair: Ed25519Keypair,
     pub login_rate_limiter: RateLimiter,
     pub csrf_key: Vec<u8>,
+    pub webauthn: webauthn_rs::prelude::Webauthn,
+    pub webauthn_state: WebauthnState,
 }
 
 pub fn build_router(state: Arc<AppState>) -> Router {
@@ -66,12 +69,21 @@ pub async fn run(config: AppConfig) -> anyhow::Result<()> {
         config.rate_limit.login_window_seconds,
     );
 
+    // Initialize WebAuthn
+    let rp_origin = url::Url::parse(&config.server.external_url)
+        .expect("external_url must be a valid URL");
+    let rp_id = rp_origin.domain().unwrap_or("localhost").to_string();
+    let webauthn = crate::auth::webauthn::build_webauthn(&rp_id, &rp_origin);
+    let webauthn_state = WebauthnState::new();
+
     let state = Arc::new(AppState {
         config: config.clone(),
         db: Mutex::new(conn),
         ed25519_keypair,
         login_rate_limiter,
         csrf_key,
+        webauthn,
+        webauthn_state,
     });
 
     let app = build_router(state);
