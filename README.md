@@ -1,8 +1,8 @@
-# houston
+# houston :rocket:
 
 Self-hosted identity provider. OIDC + SAML 2.0 in a single binary.
 
-Built to replace Okta for personal and small-team use (< 10 users) without the $1,500/yr contract.
+Built to replace Okta for personal and small-team use (< 10 users) without the $$$ minimum annual contract.
 
 ## Features
 
