@@ -45,14 +45,14 @@ mod tests {
 
     #[test]
     fn test_generate_totp_secret() {
-        let secret = generate_totp_secret("alice", "minikta").unwrap();
+        let secret = generate_totp_secret("alice", "houston").unwrap();
         assert!(!secret.base32_secret.is_empty());
         assert!(secret.otpauth_uri.starts_with("otpauth://totp/"));
     }
 
     #[test]
     fn test_verify_totp_code() {
-        let secret = generate_totp_secret("alice", "minikta").unwrap();
+        let secret = generate_totp_secret("alice", "houston").unwrap();
         let totp = totp_rs::TOTP::new(
             totp_rs::Algorithm::SHA1, 6, 1, 30,
             totp_rs::Secret::Encoded(secret.base32_secret.clone()).to_bytes().unwrap(),
@@ -64,7 +64,7 @@ mod tests {
 
     #[test]
     fn test_reject_wrong_totp_code() {
-        let secret = generate_totp_secret("alice", "minikta").unwrap();
+        let secret = generate_totp_secret("alice", "houston").unwrap();
         assert!(!verify_totp_code(&secret.base32_secret, "000000").unwrap());
     }
 }
