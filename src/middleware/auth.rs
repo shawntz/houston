@@ -95,15 +95,15 @@ mod tests {
     #[test]
     fn test_extract_session_token() {
         let mut headers = axum::http::HeaderMap::new();
-        headers.insert("cookie", HeaderValue::from_static("minikta_session=abc123; other=xyz"));
-        let token = extract_session_token(&headers, "minikta_session");
+        headers.insert("cookie", HeaderValue::from_static("houston_session=abc123; other=xyz"));
+        let token = extract_session_token(&headers, "houston_session");
         assert_eq!(token, Some("abc123".to_string()));
     }
 
     #[test]
     fn test_extract_session_token_missing() {
         let headers = axum::http::HeaderMap::new();
-        let token = extract_session_token(&headers, "minikta_session");
+        let token = extract_session_token(&headers, "houston_session");
         assert!(token.is_none());
     }
 
@@ -111,7 +111,7 @@ mod tests {
     fn test_extract_session_token_wrong_name() {
         let mut headers = axum::http::HeaderMap::new();
         headers.insert("cookie", HeaderValue::from_static("other_cookie=abc123"));
-        let token = extract_session_token(&headers, "minikta_session");
+        let token = extract_session_token(&headers, "houston_session");
         assert!(token.is_none());
     }
 }
