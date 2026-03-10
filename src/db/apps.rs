@@ -31,7 +31,7 @@ pub enum CreateApp {
     },
 }
 
-fn generate_client_id() -> String {
+pub fn generate_new_client_id() -> String {
     let bytes: [u8; 16] = rand::thread_rng().gen();
     hex::encode(bytes)
 }
@@ -56,7 +56,7 @@ pub fn create_app(conn: &Connection, app: &CreateApp) -> Result<App> {
     let id = Uuid::new_v4().to_string();
     match app {
         CreateApp::Oidc { name, redirect_uris } => {
-            let client_id = generate_client_id();
+            let client_id = generate_new_client_id();
             let uris_json = serde_json::to_string(redirect_uris)?;
             conn.execute(
                 "INSERT INTO apps (id, name, protocol, client_id, redirect_uris)

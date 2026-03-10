@@ -1,3 +1,4 @@
+pub mod apps;
 pub mod users;
 
 use std::sync::Arc;
@@ -7,4 +8,5 @@ use crate::server::AppState;
 pub fn routes() -> Router<Arc<AppState>> {
     Router::new()
         .merge(users::routes())
+        .merge(apps::routes())
 }

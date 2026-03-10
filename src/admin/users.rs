@@ -36,7 +36,7 @@ struct UpdateUserRequest {
     is_admin: Option<bool>,
 }
 
-fn require_admin(state: &AppState, headers: &axum::http::HeaderMap) -> Result<(), Response> {
+pub fn require_admin_from_headers(state: &AppState, headers: &axum::http::HeaderMap) -> Result<(), Response> {
     let token = extract_session_token(headers, &state.config.session.cookie_name)
         .ok_or_else(|| error_response("unauthorized", 401))?;
 
@@ -84,7 +84,7 @@ async fn list_users(
     State(state): State<Arc<AppState>>,
     headers: axum::http::HeaderMap,
 ) -> Response {
-    if let Err(e) = require_admin(&state, &headers) {
+    if let Err(e) = require_admin_from_headers(&state, &headers) {
         return e;
     }
 
@@ -103,7 +103,7 @@ async fn get_user(
     Path(id): Path<String>,
     headers: axum::http::HeaderMap,
 ) -> Response {
-    if let Err(e) = require_admin(&state, &headers) {
+    if let Err(e) = require_admin_from_headers(&state, &headers) {
         return e;
     }
 
@@ -120,7 +120,7 @@ async fn create_user(
     headers: axum::http::HeaderMap,
     Json(body): Json<CreateUserRequest>,
 ) -> Response {
-    if let Err(e) = require_admin(&state, &headers) {
+    if let Err(e) = require_admin_from_headers(&state, &headers) {
         return e;
     }
 
@@ -161,7 +161,7 @@ async fn update_user(
     headers: axum::http::HeaderMap,
     Json(body): Json<UpdateUserRequest>,
 ) -> Response {
-    if let Err(e) = require_admin(&state, &headers) {
+    if let Err(e) = require_admin_from_headers(&state, &headers) {
         return e;
     }
 
@@ -204,7 +204,7 @@ async fn delete_user(
     Path(id): Path<String>,
     headers: axum::http::HeaderMap,
 ) -> Response {
-    if let Err(e) = require_admin(&state, &headers) {
+    if let Err(e) = require_admin_from_headers(&state, &headers) {
         return e;
     }
 
