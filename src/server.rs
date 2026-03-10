@@ -33,7 +33,7 @@ pub async fn run(config: AppConfig) -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "minikta=info,tower_http=info".into())
+                .unwrap_or_else(|_| "houston=info,tower_http=info".into())
         )
         .init();
 
@@ -89,7 +89,7 @@ pub async fn run(config: AppConfig) -> anyhow::Result<()> {
     let app = build_router(state);
 
     let addr = format!("{}:{}", config.server.host, config.server.port);
-    tracing::info!("minikta listening on {addr}");
+    tracing::info!("houston listening on {addr}");
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await?;
 
