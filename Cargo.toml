@@ -64,6 +64,7 @@ url = { version = "2", features = ["serde"] }
 hex = "0.4"
 urlencoding = "2"
 flate2 = "1"
+rpassword = "7"
 
 [dev-dependencies]
 reqwest = { version = "0.12", features = ["json", "cookies"] }
