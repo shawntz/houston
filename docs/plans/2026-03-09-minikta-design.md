@@ -1,4 +1,4 @@
-# minikta — Minimal Self-Hosted Identity Provider
+# houston — Minimal Self-Hosted Identity Provider
 
 ## Overview
 
@@ -10,7 +10,7 @@ A self-hosted, open-source alternative to Okta built in Rust. Single binary depl
 
 ```
 ┌─────────────────────────────────────────────────┐
-│                   minikta                        │
+│                   houston                        │
 │                                                  │
 │  ┌───────────┐  ┌───────────┐  ┌─────────────┐  │
 │  │  OIDC     │  │  SAML     │  │  Admin API  │  │
@@ -37,7 +37,7 @@ A self-hosted, open-source alternative to Okta built in Rust. Single binary depl
 - Single process, single binary — SQLite embedded, admin UI assets embedded via `rust-embed`
 - Three protocol surfaces: OIDC provider endpoints, SAML IdP endpoints, REST admin API
 - One shared auth engine — all login flows go through the same core regardless of protocol
-- Config via `config.toml` with env var overrides (`MINIKTA_*`)
+- Config via `config.toml` with env var overrides (`HOUSTON_*`)
 
 ## Data Model
 
@@ -172,16 +172,16 @@ A self-hosted, open-source alternative to Okta built in Rust. Single binary depl
 - Pages: Dashboard, Users, Apps, Sessions, Audit Log
 
 ### CLI
-- `minikta init` — Create initial admin user
-- `minikta serve` — Start server
-- `minikta generate-keys` — Regenerate signing keys
+- `houston init` — Create initial admin user
+- `houston serve` — Start server
+- `houston generate-keys` — Regenerate signing keys
 
 ## Security Model
 
 ### Signing Keys
 - OIDC: **Ed25519** for JWT signing
 - SAML: **RSA-SHA256** (2048-bit) for XML-DSig
-- Generated on `minikta init`, stored encrypted at rest
+- Generated on `houston init`, stored encrypted at rest
 
 ### Master Secret
 Single `master_secret` in config, derived via HKDF-SHA256:
@@ -239,7 +239,7 @@ Single `master_secret` in config, derived via HKDF-SHA256:
 ## Project Structure
 
 ```
-minikta/
+houston/
 ├── Cargo.toml
 ├── config.example.toml
 ├── Dockerfile
