@@ -1,4 +1,4 @@
-# minikta Implementation Plan
+# houston Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** Rust (axum, tokio, rusqlite, samael, openidconnect, webauthn-rs, argon2, ring), Svelte (admin UI), SQLite
 
-**Design doc:** `docs/plans/2026-03-09-minikta-design.md`
+**Design doc:** `docs/plans/2026-03-09-houston-design.md`
 
 ---
 
@@ -26,7 +26,7 @@
 
 ```toml
 [package]
-name = "minikta"
+name = "houston"
 version = "0.1.0"
 edition = "2021"
 description = "Minimal self-hosted identity provider with OIDC and SAML support"
@@ -102,7 +102,7 @@ tempfile = "3"
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "minikta", about = "Minimal self-hosted identity provider")]
+#[command(name = "houston", about = "Minimal self-hosted identity provider")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -132,11 +132,11 @@ async fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Init { admin_username, admin_email } => {
-            println!("Initializing minikta with admin user: {admin_username} <{admin_email}>");
+            println!("Initializing houston with admin user: {admin_username} <{admin_email}>");
             todo!("init command")
         }
         Commands::Serve { config } => {
-            println!("Starting minikta with config: {config}");
+            println!("Starting houston with config: {config}");
             todo!("serve command")
         }
         Commands::GenerateKeys => {
@@ -150,7 +150,7 @@ async fn main() -> anyhow::Result<()> {
 **Step 3: Create config.example.toml**
 
 ```toml
-# minikta configuration
+# houston configuration
 # Copy to config.toml and edit.
 
 [server]
@@ -168,7 +168,7 @@ master_secret = "CHANGE_ME_GENERATE_WITH_openssl_rand_hex_32"
 
 [database]
 # Path to SQLite database file
-path = "minikta.db"
+path = "houston.db"
 
 [session]
 # Session TTL in seconds (default: 8 hours)
@@ -176,7 +176,7 @@ ttl_seconds = 28800
 # Absolute maximum session lifetime in seconds (default: 24 hours)
 max_lifetime_seconds = 86400
 # Cookie name
-cookie_name = "minikta_session"
+cookie_name = "houston_session"
 
 [rate_limit]
 # Max login failures per username per window
@@ -195,9 +195,9 @@ check_hibp = true
 
 ```
 /target
-minikta.db
-minikta.db-journal
-minikta.db-wal
+houston.db
+houston.db-journal
+houston.db-wal
 config.toml
 keys/
 admin-ui/node_modules/
@@ -214,7 +214,7 @@ Expected: Compiles successfully (with unused warnings, that's fine)
 
 ```bash
 git add Cargo.toml src/main.rs config.example.toml .gitignore
-git commit -m "feat: initialize minikta project scaffold"
+git commit -m "feat: initialize houston project scaffold"
 ```
 
 ---
@@ -408,10 +408,10 @@ impl Default for PasswordConfig {
 fn default_host() -> String { "127.0.0.1".to_string() }
 fn default_port() -> u16 { 8080 }
 fn default_true() -> bool { true }
-fn default_db_path() -> String { "minikta.db".to_string() }
+fn default_db_path() -> String { "houston.db".to_string() }
 fn default_session_ttl() -> u64 { 28800 }
 fn default_session_max() -> u64 { 86400 }
-fn default_cookie_name() -> String { "minikta_session".to_string() }
+fn default_cookie_name() -> String { "houston_session".to_string() }
 fn default_login_max() -> u32 { 5 }
 fn default_login_window() -> u64 { 900 }
 fn default_min_length() -> usize { 12 }
@@ -420,7 +420,7 @@ impl AppConfig {
     pub fn load(path: &str) -> anyhow::Result<Self> {
         let settings = config::Config::builder()
             .add_source(config::File::with_name(path))
-            .add_source(config::Environment::with_prefix("MINIKTA").separator("__"))
+            .add_source(config::Environment::with_prefix("HOUSTON").separator("__"))
             .build()?;
 
         let cfg: AppConfig = settings.try_deserialize()?;
@@ -1851,14 +1851,14 @@ mod tests {
 
     #[test]
     fn test_generate_totp_secret() {
-        let secret = generate_totp_secret("alice", "minikta").unwrap();
+        let secret = generate_totp_secret("alice", "houston").unwrap();
         assert!(!secret.base32_secret.is_empty());
         assert!(secret.otpauth_uri.starts_with("otpauth://totp/"));
     }
 
     #[test]
     fn test_verify_totp_code() {
-        let secret = generate_totp_secret("alice", "minikta").unwrap();
+        let secret = generate_totp_secret("alice", "houston").unwrap();
         let totp = totp_rs::TOTP::new(
             totp_rs::Algorithm::SHA1, 6, 1, 30,
             totp_rs::Secret::Encoded(secret.base32_secret.clone()).to_bytes().unwrap(),
@@ -1869,7 +1869,7 @@ mod tests {
 
     #[test]
     fn test_reject_wrong_totp_code() {
-        let secret = generate_totp_secret("alice", "minikta").unwrap();
+        let secret = generate_totp_secret("alice", "houston").unwrap();
         assert!(!verify_totp_code(&secret.base32_secret, "000000").unwrap());
     }
 }
@@ -2275,7 +2275,7 @@ pub async fn run(config: AppConfig) -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "minikta=info,tower_http=info".into())
+                .unwrap_or_else(|_| "houston=info,tower_http=info".into())
         )
         .init();
 
@@ -2323,7 +2323,7 @@ pub async fn run(config: AppConfig) -> anyhow::Result<()> {
     let app = build_router(state);
 
     let addr = format!("{}:{}", config.server.host, config.server.port);
-    tracing::info!("minikta listening on {addr}");
+    tracing::info!("houston listening on {addr}");
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await?;
 
@@ -2545,7 +2545,7 @@ fn render_login_page(error: Option<&str>, redirect_to: Option<&str>) -> String {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sign In - minikta</title>
+    <title>Sign In - houston</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -3026,10 +3026,10 @@ git commit -m "feat: add WebAuthn passkey authentication flow"
 **Files:**
 - Modify: `src/main.rs`
 
-`minikta init` — runs migrations, prompts for admin password (via `rpassword` crate), creates admin user.
+`houston init` — runs migrations, prompts for admin password (via `rpassword` crate), creates admin user.
 
 ```bash
-git commit -m "feat: add minikta init command for admin user creation"
+git commit -m "feat: add houston init command for admin user creation"
 ```
 
 ---
@@ -3039,10 +3039,10 @@ git commit -m "feat: add minikta init command for admin user creation"
 **Files:**
 - Modify: `src/main.rs`
 
-`minikta generate-keys` — generates fresh Ed25519 + RSA keypairs, saves encrypted.
+`houston generate-keys` — generates fresh Ed25519 + RSA keypairs, saves encrypted.
 
 ```bash
-git commit -m "feat: add minikta generate-keys command"
+git commit -m "feat: add houston generate-keys command"
 ```
 
 ---
