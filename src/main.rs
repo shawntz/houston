@@ -35,9 +35,9 @@ async fn main() -> anyhow::Result<()> {
             todo!("init command")
         }
         Commands::Serve { config: config_path } => {
-            let _cfg = minikta::config::AppConfig::load(&config_path)?;
-            println!("Config loaded. Starting server on {}:{}", _cfg.server.host, _cfg.server.port);
-            todo!("serve command")
+            let cfg = minikta::config::AppConfig::load(&config_path)?;
+            minikta::server::run(cfg).await?;
+            Ok(())
         }
         Commands::GenerateKeys => {
             println!("Regenerating signing keys...");
