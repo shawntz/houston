@@ -19,11 +19,11 @@ RUN cargo build --release
 # Stage 3: Minimal runtime image
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates libxml2 libxmlsec1 libxmlsec1-openssl && rm -rf /var/lib/apt/lists/*
-RUN useradd -r -s /usr/sbin/nologin minikta
-COPY --from=rust-builder /app/target/release/minikta /usr/local/bin/minikta
-RUN mkdir -p /data /keys && chown minikta:minikta /data /keys
-USER minikta
+RUN useradd -r -s /usr/sbin/nologin houston
+COPY --from=rust-builder /app/target/release/houston /usr/local/bin/houston
+RUN mkdir -p /data /keys && chown houston:houston /data /keys
+USER houston
 WORKDIR /data
 EXPOSE 8080
-ENTRYPOINT ["minikta"]
+ENTRYPOINT ["houston"]
 CMD ["serve", "--config", "/data/config.toml"]
