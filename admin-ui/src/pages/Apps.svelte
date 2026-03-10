@@ -66,77 +66,183 @@
   $effect(() => { load(); });
 </script>
 
-<h1>Apps</h1>
+<div class="page-header">
+  <div class="page-header-row">
+    <div>
+      <h1>Apps</h1>
+      <p class="page-desc">Manage OIDC and SAML applications.</p>
+    </div>
+    <button class="btn btn-primary" onclick={() => showCreate = !showCreate}>
+      {showCreate ? 'Cancel' : '+ Register App'}
+    </button>
+  </div>
+</div>
 
 {#if error}
-  <p class="error">Error: {error} <button onclick={() => error = null}>dismiss</button></p>
+  <div class="alert alert-destructive">
+    <span>{error}</span>
+    <button class="btn btn-ghost btn-sm" onclick={() => error = null}>Dismiss</button>
+  </div>
 {/if}
 
-<button class="btn primary" onclick={() => showCreate = !showCreate}>
-  {showCreate ? 'Cancel' : 'Register App'}
-</button>
-
 {#if showCreate}
-  <div class="form-card">
-    <h3>New App</h3>
-    <label>Name <input bind:value={form.name} /></label>
-    <label>Protocol
-      <select bind:value={form.protocol}>
-        <option value="oidc">OIDC</option>
-        <option value="saml">SAML</option>
-      </select>
-    </label>
-    {#if form.protocol === 'oidc'}
-      <label>Redirect URIs (one per line) <textarea bind:value={form.redirect_uris}></textarea></label>
-    {:else}
-      <label>Entity ID <input bind:value={form.entity_id} /></label>
-      <label>ACS URL <input bind:value={form.acs_url} /></label>
-    {/if}
-    <button class="btn primary" onclick={handleCreate}>Create</button>
+  <div class="card form-card">
+    <div class="card-header">
+      <h3>New Application</h3>
+    </div>
+    <div class="card-content">
+      <div class="form-fields">
+        <div class="field">
+          <label for="app-name">Name</label>
+          <input id="app-name" type="text" bind:value={form.name} placeholder="My Application" />
+        </div>
+        <div class="field">
+          <label for="app-protocol">Protocol</label>
+          <select id="app-protocol" bind:value={form.protocol}>
+            <option value="oidc">OIDC</option>
+            <option value="saml">SAML</option>
+          </select>
+        </div>
+        {#if form.protocol === 'oidc'}
+          <div class="field">
+            <label for="app-redirects">Redirect URIs <span class="hint">one per line</span></label>
+            <textarea id="app-redirects" bind:value={form.redirect_uris} placeholder="https://app.example.com/callback"></textarea>
+          </div>
+        {:else}
+          <div class="field">
+            <label for="app-entity">Entity ID</label>
+            <input id="app-entity" type="text" bind:value={form.entity_id} placeholder="urn:example:app" />
+          </div>
+          <div class="field">
+            <label for="app-acs">ACS URL</label>
+            <input id="app-acs" type="text" bind:value={form.acs_url} placeholder="https://app.example.com/saml/acs" />
+          </div>
+        {/if}
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick={handleCreate}>Create App</button>
+        <button class="btn btn-outline" onclick={() => showCreate = false}>Cancel</button>
+      </div>
+    </div>
   </div>
 {/if}
 
 {#if loading}
-  <p>Loading...</p>
+  <div class="loading">Loading...</div>
 {:else}
-  <table>
-    <thead>
-      <tr><th>Name</th><th>Protocol</th><th>Client ID / Entity ID</th><th>Actions</th></tr>
-    </thead>
-    <tbody>
-      {#each apps as app}
+  <div class="card table-wrapper">
+    <table>
+      <thead>
         <tr>
-          <td>{app.name}</td>
-          <td>{app.protocol.toUpperCase()}</td>
-          <td>{app.client_id || app.entity_id || '-'}</td>
-          <td>
-            {#if app.protocol === 'oidc'}
-              <button class="btn" onclick={() => handleRotate(app.id)}>Rotate ID</button>
-            {/if}
-            <button class="btn danger" onclick={() => handleDelete(app.id)}>Delete</button>
-          </td>
+          <th>Name</th>
+          <th>Protocol</th>
+          <th>Client ID / Entity ID</th>
+          <th class="actions-col">Actions</th>
         </tr>
-      {/each}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {#each apps as app}
+          <tr>
+            <td class="font-medium">{app.name}</td>
+            <td><span class="badge badge-protocol">{app.protocol.toUpperCase()}</span></td>
+            <td class="mono">{app.client_id || app.entity_id || '\u2014'}</td>
+            <td class="actions-col">
+              {#if app.protocol === 'oidc'}
+                <button class="btn btn-outline btn-sm" onclick={() => handleRotate(app.id)}>Rotate ID</button>
+              {/if}
+              <button class="btn btn-destructive btn-sm" onclick={() => handleDelete(app.id)}>Delete</button>
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+    {#if apps.length === 0}
+      <div class="empty-state">
+        <p class="muted">No apps registered.</p>
+      </div>
+    {/if}
+  </div>
 {/if}
 
 <style>
-  .form-card {
-    background: white; padding: 1.5rem; border-radius: 8px; margin: 1rem 0;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column;
-    gap: 0.5rem; max-width: 400px;
+  .page-header { margin-bottom: 1.5rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.025em; color: hsl(var(--foreground)); }
+  .page-desc { color: hsl(var(--muted-foreground)); font-size: 0.875rem; margin-top: 0.25rem; }
+  .page-header-row { display: flex; justify-content: space-between; align-items: flex-start; }
+
+  .loading { color: hsl(var(--muted-foreground)); font-size: 0.875rem; padding: 2rem; }
+
+  .alert-destructive {
+    display: flex; justify-content: space-between; align-items: center;
+    background: hsl(var(--destructive) / 0.1); color: hsl(var(--destructive));
+    border: 1px solid hsl(var(--destructive) / 0.2); padding: 0.75rem 1rem;
+    border-radius: var(--radius); font-size: 0.875rem; margin-bottom: 1rem;
   }
-  .form-card label { display: flex; flex-direction: column; gap: 0.25rem; }
-  .form-card input, .form-card select, .form-card textarea {
-    padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;
+
+  .card { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: var(--radius); }
+  .card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid hsl(var(--border)); }
+  .card-header h3 { font-size: 1rem; font-weight: 600; }
+  .card-content { padding: 1.5rem; }
+  .form-card { margin-bottom: 1.5rem; }
+
+  .form-fields { display: flex; flex-direction: column; gap: 1rem; max-width: 500px; }
+  .field { display: flex; flex-direction: column; gap: 0.375rem; }
+  .field label { font-size: 0.875rem; font-weight: 500; color: hsl(var(--foreground)); }
+  .hint { font-weight: 400; color: hsl(var(--muted-foreground)); }
+
+  .field input, .field select, .field textarea {
+    padding: 0.5rem 0.75rem; border: 1px solid hsl(var(--input)); border-radius: var(--radius);
+    font-size: 0.875rem; font-family: inherit; background: transparent;
+    transition: border-color 0.15s, box-shadow 0.15s; outline: none;
   }
-  .form-card textarea { min-height: 60px; }
-  table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-top: 1rem; }
-  th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #eee; }
-  th { background: #f9f9f9; font-weight: 600; }
-  .btn { padding: 0.4rem 0.8rem; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: white; }
-  .btn.primary { background: #0f3460; color: white; border-color: #0f3460; }
-  .btn.danger { background: #dc3545; color: white; border-color: #dc3545; }
-  .error { color: red; background: #fff0f0; padding: 0.5rem 1rem; border-radius: 4px; }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: hsl(var(--ring));
+    box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
+  }
+  .field textarea { min-height: 80px; resize: vertical; }
+  .field input::placeholder, .field textarea::placeholder { color: hsl(var(--muted-foreground)); }
+
+  .form-actions { display: flex; gap: 0.5rem; margin-top: 1.25rem; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    font-family: inherit; font-size: 0.875rem; font-weight: 500;
+    padding: 0.5rem 1rem; border-radius: var(--radius); cursor: pointer;
+    transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+    border: 1px solid transparent; outline: none;
+  }
+  .btn:focus-visible { box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2); }
+  .btn-sm { padding: 0.25rem 0.625rem; font-size: 0.8125rem; }
+  .btn-primary { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-outline { background: transparent; border-color: hsl(var(--input)); color: hsl(var(--foreground)); }
+  .btn-outline:hover { background: hsl(var(--accent)); }
+  .btn-destructive { background: hsl(var(--destructive)); color: hsl(var(--destructive-foreground)); }
+  .btn-destructive:hover { opacity: 0.9; }
+  .btn-ghost { background: transparent; color: inherit; }
+  .btn-ghost:hover { background: hsl(var(--accent)); }
+
+  .table-wrapper { overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; padding: 0.75rem 1rem; font-size: 0.75rem; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    color: hsl(var(--muted-foreground)); border-bottom: 1px solid hsl(var(--border));
+  }
+  td { padding: 0.75rem 1rem; font-size: 0.875rem; border-bottom: 1px solid hsl(var(--border)); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: hsl(var(--muted) / 0.5); }
+  .actions-col { text-align: right; white-space: nowrap; }
+  .actions-col :global(button + button) { margin-left: 0.375rem; }
+
+  .badge {
+    display: inline-block; padding: 0.125rem 0.5rem; font-size: 0.75rem; font-weight: 500;
+    border-radius: 9999px; background: hsl(var(--secondary)); color: hsl(var(--muted-foreground));
+  }
+  .badge-protocol { background: hsl(var(--primary) / 0.1); color: hsl(var(--primary)); font-weight: 600; }
+
+  .mono { font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace; font-size: 0.8125rem; }
+  .font-medium { font-weight: 500; }
+  .muted { color: hsl(var(--muted-foreground)); }
+  .empty-state { padding: 2rem; text-align: center; }
 </style>
