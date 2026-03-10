@@ -1,0 +1,8 @@
+target/
+admin-ui/node_modules/
+admin-ui/dist/
+keys/
+*.db
+*.db-wal
+*.db-shm
+.git/
