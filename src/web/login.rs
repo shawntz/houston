@@ -116,7 +116,7 @@ async fn logout(State(_state): State<Arc<AppState>>) -> Redirect {
 }
 
 fn render_login_page(error: Option<&str>, redirect_to: Option<&str>) -> String {
-    let error_html = error.map(|e| format!(r#"<div class="error">{e}</div>"#)).unwrap_or_default();
+    let error_html = error.map(|e| format!(r#"<div class="alert">{e}</div>"#)).unwrap_or_default();
     let redirect_input = redirect_to
         .map(|r| format!(r#"<input type="hidden" name="redirect_to" value="{r}">"#))
         .unwrap_or_default();
@@ -126,43 +126,168 @@ fn render_login_page(error: Option<&str>, redirect_to: Option<&str>) -> String {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sign In - minikta</title>
+    <title>Sign In - houston</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {{
+            --background: 0 0% 100%;
+            --foreground: 240 10% 3.9%;
+            --card: 0 0% 100%;
+            --card-foreground: 240 10% 3.9%;
+            --primary: 240 5.9% 10%;
+            --primary-foreground: 0 0% 98%;
+            --secondary: 240 4.8% 95.9%;
+            --muted: 240 4.8% 95.9%;
+            --muted-foreground: 240 3.8% 46.1%;
+            --destructive: 0 84.2% 60.2%;
+            --border: 240 5.9% 90%;
+            --input: 240 5.9% 90%;
+            --ring: 240 5.9% 10%;
+            --radius: 0.5rem;
+        }}
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-               background: #f5f5f5; display: flex; justify-content: center; align-items: center;
-               min-height: 100vh; }}
-        .card {{ background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                 width: 100%; max-width: 400px; }}
-        h1 {{ font-size: 1.5rem; margin-bottom: 1.5rem; text-align: center; }}
-        .error {{ background: #fee; color: #c33; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem;
-                  font-size: 0.9rem; }}
-        label {{ display: block; margin-bottom: 0.25rem; font-size: 0.9rem; font-weight: 500; }}
-        input[type="text"], input[type="password"] {{
-            width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;
-            font-size: 1rem; margin-bottom: 1rem; }}
-        button {{ width: 100%; padding: 0.75rem; background: #2563eb; color: white; border: none;
-                  border-radius: 4px; font-size: 1rem; cursor: pointer; }}
-        button:hover {{ background: #1d4ed8; }}
-        .passkey-divider {{ text-align: center; margin: 1rem 0; color: #999; font-size: 0.9rem; }}
-        .passkey-btn {{ background: #059669; }}
-        .passkey-btn:hover {{ background: #047857; }}
+        body {{
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: hsl(var(--muted));
+            color: hsl(var(--foreground));
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }}
+        .brand {{
+            font-size: 1.125rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            color: hsl(var(--foreground));
+            margin-bottom: 2rem;
+        }}
+        .card {{
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            padding: 2rem;
+            width: 100%;
+            max-width: 380px;
+        }}
+        .card-title {{
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+            text-align: center;
+            margin-bottom: 0.25rem;
+        }}
+        .card-desc {{
+            text-align: center;
+            font-size: 0.875rem;
+            color: hsl(var(--muted-foreground));
+            margin-bottom: 1.5rem;
+        }}
+        .alert {{
+            background: hsl(var(--destructive) / 0.1);
+            color: hsl(var(--destructive));
+            border: 1px solid hsl(var(--destructive) / 0.2);
+            padding: 0.625rem 0.875rem;
+            border-radius: var(--radius);
+            font-size: 0.8125rem;
+            margin-bottom: 1rem;
+        }}
+        .field {{
+            margin-bottom: 1rem;
+        }}
+        .field label {{
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.375rem;
+            color: hsl(var(--foreground));
+        }}
+        .field input {{
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid hsl(var(--input));
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+            font-family: inherit;
+            background: transparent;
+            color: hsl(var(--foreground));
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }}
+        .field input:focus {{
+            border-color: hsl(var(--ring));
+            box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
+        }}
+        .field input::placeholder {{
+            color: hsl(var(--muted-foreground));
+        }}
+        .btn {{
+            width: 100%;
+            padding: 0.5rem 1rem;
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: var(--radius);
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: opacity 0.15s;
+            outline: none;
+        }}
+        .btn:focus-visible {{
+            box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
+        }}
+        .btn-primary {{
+            background: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+        }}
+        .btn-primary:hover {{ opacity: 0.9; }}
+        .btn-outline {{
+            background: transparent;
+            border-color: hsl(var(--input));
+            color: hsl(var(--foreground));
+        }}
+        .btn-outline:hover {{
+            background: hsl(var(--secondary));
+        }}
+        .divider {{
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin: 1.25rem 0;
+            color: hsl(var(--muted-foreground));
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }}
+        .divider::before, .divider::after {{
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: hsl(var(--border));
+        }}
     </style>
 </head>
 <body>
+    <div class="brand">houston</div>
     <div class="card">
-        <h1>Sign In</h1>
+        <h1 class="card-title">Sign In</h1>
+        <p class="card-desc">Enter your credentials to continue.</p>
         {error_html}
         <form method="POST" action="/login/password">
             {redirect_input}
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" required autofocus>
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required>
-            <button type="submit">Sign In</button>
+            <div class="field">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required autofocus placeholder="Enter your username">
+            </div>
+            <div class="field">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required placeholder="Enter your password">
+            </div>
+            <button class="btn btn-primary" type="submit">Sign In</button>
         </form>
-        <div class="passkey-divider">or</div>
-        <button class="passkey-btn" id="passkey-btn" onclick="startPasskeyAuth()">
+        <div class="divider">or</div>
+        <button class="btn btn-outline" id="passkey-btn" onclick="startPasskeyAuth()">
             Sign in with Passkey
         </button>
     </div>
