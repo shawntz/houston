@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "minikta", about = "Minimal self-hosted identity provider")]
+#[command(name = "houston", about = "Minimal self-hosted identity provider")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -36,13 +36,13 @@ async fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Init { config: config_path, admin_username, admin_email } => {
-            let cfg = minikta::config::AppConfig::load(&config_path)?;
+            let cfg = houston::config::AppConfig::load(&config_path)?;
 
-            println!("Initializing minikta database at {}", cfg.database.path);
-            let conn = minikta::db::initialize(&cfg.database.path)?;
+            println!("Initializing houston database at {}", cfg.database.path);
+            let conn = houston::db::initialize(&cfg.database.path)?;
 
             // Check if admin already exists
-            if let Ok(Some(_)) = minikta::db::users::get_user_by_username(&conn, &admin_username) {
+            if let Ok(Some(_)) = houston::db::users::get_user_by_username(&conn, &admin_username) {
                 println!("Admin user '{}' already exists, skipping creation.", admin_username);
                 return Ok(());
             }
@@ -59,9 +59,9 @@ async fn main() -> anyhow::Result<()> {
                 anyhow::bail!("Password must be at least {} characters", cfg.password.min_length);
             }
 
-            let password_hash = minikta::auth::password::hash_password(&password)?;
+            let password_hash = houston::auth::password::hash_password(&password)?;
 
-            let user = minikta::db::users::create_user(&conn, &minikta::db::users::CreateUser {
+            let user = houston::db::users::create_user(&conn, &houston::db::users::CreateUser {
                 username: admin_username.clone(),
                 email: admin_email.clone(),
                 display_name: admin_username.clone(),
@@ -70,16 +70,16 @@ async fn main() -> anyhow::Result<()> {
             })?;
 
             println!("Created admin user '{}' (id: {})", user.username, user.id);
-            println!("You can now start minikta with: minikta serve");
+            println!("You can now start houston with: houston serve");
             Ok(())
         }
         Commands::Serve { config: config_path } => {
-            let cfg = minikta::config::AppConfig::load(&config_path)?;
-            minikta::server::run(cfg).await?;
+            let cfg = houston::config::AppConfig::load(&config_path)?;
+            houston::server::run(cfg).await?;
             Ok(())
         }
         Commands::GenerateKeys { config: config_path } => {
-            let cfg = minikta::config::AppConfig::load(&config_path)?;
+            let cfg = houston::config::AppConfig::load(&config_path)?;
             println!("Regenerating signing keys...");
 
             let keys_dir = "keys";
@@ -87,8 +87,8 @@ async fn main() -> anyhow::Result<()> {
 
             // Generate Ed25519
             let ed25519_key_path = format!("{keys_dir}/ed25519.key.enc");
-            let kp = minikta::crypto::keys::generate_ed25519_keypair()?;
-            minikta::crypto::keys::save_encrypted_key(
+            let kp = houston::crypto::keys::generate_ed25519_keypair()?;
+            houston::crypto::keys::save_encrypted_key(
                 &kp.private_key_pkcs8,
                 &ed25519_key_path,
                 &cfg.secrets.master_secret,
