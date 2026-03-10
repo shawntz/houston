@@ -21,6 +21,7 @@ pub fn build_router(state: Arc<AppState>) -> Router {
     Router::new()
         .merge(crate::web::routes(state.clone()))
         .merge(crate::oidc::routes())
+        .merge(crate::saml::routes())
         .with_state(state)
 }
 
