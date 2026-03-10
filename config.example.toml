@@ -1,4 +1,4 @@
-# minikta configuration
+# houston configuration
 # Copy to config.toml and edit.
 
 [server]
@@ -16,7 +16,7 @@ master_secret = "CHANGE_ME_GENERATE_WITH_openssl_rand_hex_32"
 
 [database]
 # Path to SQLite database file
-path = "minikta.db"
+path = "houston.db"
 
 [session]
 # Session TTL in seconds (default: 8 hours)
@@ -24,7 +24,7 @@ ttl_seconds = 28800
 # Absolute maximum session lifetime in seconds (default: 24 hours)
 max_lifetime_seconds = 86400
 # Cookie name
-cookie_name = "minikta_session"
+cookie_name = "houston_session"
 
 [rate_limit]
 # Max login failures per username per window
