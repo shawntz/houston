@@ -4,10 +4,10 @@ use http_body_util::BodyExt;
 use tower::ServiceExt;
 use std::sync::Arc;
 use std::sync::Mutex;
-use minikta::config::AppConfig;
-use minikta::db;
-use minikta::auth::{password, session};
-use minikta::db::{users, sessions, apps};
+use houston::config::AppConfig;
+use houston::db;
+use houston::auth::{password, session};
+use houston::db::{users, sessions, apps};
 
 fn test_state_with_app() -> (axum::Router, String, String) {
     let conn = db::test_db();
@@ -33,23 +33,23 @@ fn test_state_with_app() -> (axum::Router, String, String) {
 
     let config = AppConfig::default();
     let cookie_name = config.session.cookie_name.clone();
-    let kp = minikta::crypto::keys::generate_ed25519_keypair().unwrap();
+    let kp = houston::crypto::keys::generate_ed25519_keypair().unwrap();
     let csrf_key = vec![0u8; 32];
     let rp_origin = url::Url::parse("https://localhost").unwrap();
-    let webauthn = minikta::auth::webauthn::build_webauthn("localhost", &rp_origin);
+    let webauthn = houston::auth::webauthn::build_webauthn("localhost", &rp_origin);
 
-    let state = Arc::new(minikta::server::AppState {
+    let state = Arc::new(houston::server::AppState {
         config,
         db: Mutex::new(conn),
         ed25519_keypair: kp,
-        login_rate_limiter: minikta::middleware::rate_limit::RateLimiter::new(10, 60),
+        login_rate_limiter: houston::middleware::rate_limit::RateLimiter::new(10, 60),
         csrf_key,
         webauthn,
-        webauthn_state: minikta::auth::webauthn::WebauthnState::new(),
+        webauthn_state: houston::auth::webauthn::WebauthnState::new(),
     });
 
     let cookie = format!("{cookie_name}={token}");
-    let router = minikta::server::build_router(state);
+    let router = houston::server::build_router(state);
     (router, client_id, cookie)
 }
 
