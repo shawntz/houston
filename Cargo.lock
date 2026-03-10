@@ -1124,6 +1124,50 @@ dependencies = [
 ]
 
 [[package]]
+name = "houston"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "argon2",
+ "axum",
+ "axum-extra",
+ "base64 0.22.1",
+ "chrono",
+ "clap",
+ "config",
+ "deadpool",
+ "flate2",
+ "hex",
+ "http-body-util",
+ "jsonwebtoken",
+ "mime_guess",
+ "quick-xml 0.37.5",
+ "rand 0.8.5",
+ "refinery",
+ "reqwest",
+ "ring",
+ "rpassword",
+ "rusqlite",
+ "rust-embed",
+ "samael",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "totp-rs",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "urlencoding",
+ "uuid",
+ "webauthn-rs",
+ "webauthn-rs-proto",
+]
+
+[[package]]
 name = "http"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1630,50 +1674,6 @@ checksum = "f7c44f8e672c00fe5308fa235f821cb4198414e1c77935c1ab6948d3fd78550e"
 dependencies = [
  "mime",
  "unicase",
-]
-
-[[package]]
-name = "minikta"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "argon2",
- "axum",
- "axum-extra",
- "base64 0.22.1",
- "chrono",
- "clap",
- "config",
- "deadpool",
- "flate2",
- "hex",
- "http-body-util",
- "jsonwebtoken",
- "mime_guess",
- "quick-xml 0.37.5",
- "rand 0.8.5",
- "refinery",
- "reqwest",
- "ring",
- "rpassword",
- "rusqlite",
- "rust-embed",
- "samael",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "totp-rs",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "url",
- "urlencoding",
- "uuid",
- "webauthn-rs",
- "webauthn-rs-proto",
 ]
 
 [[package]]
