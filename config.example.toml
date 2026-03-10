@@ -1,0 +1,39 @@
+# minikta configuration
+# Copy to config.toml and edit.
+
+[server]
+# Address to bind to
+host = "127.0.0.1"
+port = 8080
+# External URL (used in OIDC discovery, SAML metadata)
+external_url = "https://id.example.com"
+# Require HTTPS via X-Forwarded-Proto header
+require_https = true
+
+[secrets]
+# Master secret for key derivation (HKDF). Generate with: openssl rand -hex 32
+master_secret = "CHANGE_ME_GENERATE_WITH_openssl_rand_hex_32"
+
+[database]
+# Path to SQLite database file
+path = "minikta.db"
+
+[session]
+# Session TTL in seconds (default: 8 hours)
+ttl_seconds = 28800
+# Absolute maximum session lifetime in seconds (default: 24 hours)
+max_lifetime_seconds = 86400
+# Cookie name
+cookie_name = "minikta_session"
+
+[rate_limit]
+# Max login failures per username per window
+login_max_attempts = 5
+# Window in seconds
+login_window_seconds = 900
+
+[password]
+# Minimum password length
+min_length = 12
+# Check passwords against HaveIBeenPwned (k-anonymity API)
+check_hibp = true

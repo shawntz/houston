@@ -1,0 +1,9 @@
+/target
+minikta.db
+minikta.db-journal
+minikta.db-wal
+config.toml
+keys/
+admin-ui/node_modules/
+admin-ui/dist/
+*.pem
