@@ -44,6 +44,7 @@ config = "0.14"
 
 # Embedded assets
 rust-embed = { version = "8", features = ["mime-guess"] }
+mime_guess = "2"
 
 # Logging
 tracing = "0.1"

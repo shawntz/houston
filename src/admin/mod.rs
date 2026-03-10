@@ -1,6 +1,7 @@
 pub mod apps;
 pub mod audit;
 pub mod sessions;
+pub mod spa;
 pub mod users;
 
 use std::sync::Arc;
@@ -13,4 +14,5 @@ pub fn routes() -> Router<Arc<AppState>> {
         .merge(apps::routes())
         .merge(sessions::routes())
         .merge(audit::routes())
+        .merge(spa::routes())
 }
