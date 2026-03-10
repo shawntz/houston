@@ -99,10 +99,10 @@ impl Default for PasswordConfig {
 fn default_host() -> String { "127.0.0.1".to_string() }
 fn default_port() -> u16 { 8080 }
 fn default_true() -> bool { true }
-fn default_db_path() -> String { "minikta.db".to_string() }
+fn default_db_path() -> String { "houston.db".to_string() }
 fn default_session_ttl() -> u64 { 28800 }
 fn default_session_max() -> u64 { 86400 }
-fn default_cookie_name() -> String { "minikta_session".to_string() }
+fn default_cookie_name() -> String { "houston_session".to_string() }
 fn default_login_max() -> u32 { 5 }
 fn default_login_window() -> u64 { 900 }
 fn default_min_length() -> usize { 12 }
@@ -131,7 +131,7 @@ impl AppConfig {
     pub fn load(path: &str) -> anyhow::Result<Self> {
         let settings = config::Config::builder()
             .add_source(config::File::with_name(path))
-            .add_source(config::Environment::with_prefix("MINIKTA").separator("__"))
+            .add_source(config::Environment::with_prefix("HOUSTON").separator("__"))
             .build()?;
 
         let cfg: AppConfig = settings.try_deserialize()?;
