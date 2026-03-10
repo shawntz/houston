@@ -4,3 +4,4 @@ pub mod crypto;
 pub mod db;
 pub mod middleware;
 pub mod server;
+pub mod web;
