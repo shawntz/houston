@@ -23,42 +23,54 @@
     window.addEventListener('hashchange', handler);
     return () => window.removeEventListener('hashchange', handler);
   });
+
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: '⊞' },
+    { id: 'users', label: 'Users', icon: '⊡' },
+    { id: 'apps', label: 'Apps', icon: '⊟' },
+    { id: 'sessions', label: 'Sessions', icon: '⊙' },
+    { id: 'audit', label: 'Audit Log', icon: '⊘' },
+  ];
 </script>
 
 <div class="app">
-  <nav class="sidebar">
-    <h2 class="logo">minikta</h2>
-    <ul>
-      <li class:active={currentPage === 'dashboard'}>
-        <button onclick={() => navigate('dashboard')}>Dashboard</button>
-      </li>
-      <li class:active={currentPage === 'users'}>
-        <button onclick={() => navigate('users')}>Users</button>
-      </li>
-      <li class:active={currentPage === 'apps'}>
-        <button onclick={() => navigate('apps')}>Apps</button>
-      </li>
-      <li class:active={currentPage === 'sessions'}>
-        <button onclick={() => navigate('sessions')}>Sessions</button>
-      </li>
-      <li class:active={currentPage === 'audit'}>
-        <button onclick={() => navigate('audit')}>Audit Log</button>
-      </li>
-    </ul>
-  </nav>
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span class="logo">houston</span>
+    </div>
+    <nav class="sidebar-nav">
+      {#each navItems as item}
+        <button
+          class="nav-item"
+          class:active={currentPage === item.id}
+          onclick={() => navigate(item.id)}
+        >
+          <span class="nav-icon">{item.icon}</span>
+          {item.label}
+        </button>
+      {/each}
+    </nav>
+    <div class="sidebar-footer">
+      <form method="POST" action="/logout">
+        <button type="submit" class="nav-item logout-btn">Sign out</button>
+      </form>
+    </div>
+  </aside>
 
   <main class="content">
-    {#if currentPage === 'dashboard'}
-      <Dashboard />
-    {:else if currentPage === 'users'}
-      <Users />
-    {:else if currentPage === 'apps'}
-      <Apps />
-    {:else if currentPage === 'sessions'}
-      <Sessions />
-    {:else if currentPage === 'audit'}
-      <AuditLog />
-    {/if}
+    <div class="content-inner">
+      {#if currentPage === 'dashboard'}
+        <Dashboard />
+      {:else if currentPage === 'users'}
+        <Users />
+      {:else if currentPage === 'apps'}
+        <Apps />
+      {:else if currentPage === 'sessions'}
+        <Sessions />
+      {:else if currentPage === 'audit'}
+        <AuditLog />
+      {/if}
+    </div>
   </main>
 </div>
 
@@ -69,54 +81,88 @@
   }
 
   .sidebar {
-    width: 220px;
-    background: #1a1a2e;
-    color: #eee;
-    padding: 1rem;
+    width: 240px;
+    background: hsl(var(--card));
+    border-right: 1px solid hsl(var(--border));
+    display: flex;
+    flex-direction: column;
     flex-shrink: 0;
   }
 
+  .sidebar-header {
+    padding: 1.5rem 1.25rem;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+
   .logo {
-    font-size: 1.4rem;
-    margin-bottom: 1.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #333;
+    font-size: 1.125rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: hsl(var(--foreground));
   }
 
-  .sidebar ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+  .sidebar-nav {
+    flex: 1;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
   }
 
-  .sidebar li {
-    margin-bottom: 0.25rem;
-  }
-
-  .sidebar button {
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
     width: 100%;
     text-align: left;
     background: none;
     border: none;
-    color: #ccc;
+    color: hsl(var(--muted-foreground));
     padding: 0.5rem 0.75rem;
-    border-radius: 4px;
+    border-radius: var(--radius);
     cursor: pointer;
-    font-size: 0.95rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: background-color 0.15s, color 0.15s;
+    font-family: inherit;
   }
 
-  .sidebar button:hover {
-    background: #16213e;
+  .nav-item:hover {
+    background: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
   }
 
-  .sidebar li.active button {
-    background: #0f3460;
-    color: #fff;
+  .nav-item.active {
+    background: hsl(var(--secondary));
+    color: hsl(var(--secondary-foreground));
+    font-weight: 600;
+  }
+
+  .nav-icon {
+    font-size: 1rem;
+    width: 1.25rem;
+    text-align: center;
+    opacity: 0.7;
+  }
+
+  .sidebar-footer {
+    padding: 0.75rem;
+    border-top: 1px solid hsl(var(--border));
+  }
+
+  .logout-btn {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.875rem;
   }
 
   .content {
     flex: 1;
+    background: hsl(var(--muted));
+    overflow-y: auto;
+  }
+
+  .content-inner {
+    max-width: 1200px;
     padding: 2rem;
-    background: #f5f5f5;
   }
 </style>
