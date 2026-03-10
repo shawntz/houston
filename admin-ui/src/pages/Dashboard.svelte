@@ -31,86 +31,162 @@
   $effect(() => { loadDashboard(); });
 </script>
 
-<h1>Dashboard</h1>
+<div class="page-header">
+  <h1>Dashboard</h1>
+  <p class="page-desc">Overview of your identity provider.</p>
+</div>
 
 {#if loading}
-  <p>Loading...</p>
+  <div class="loading">Loading...</div>
 {:else if error}
-  <p class="error">Error: {error}</p>
+  <div class="alert alert-destructive">
+    <p>{error}</p>
+  </div>
 {:else}
   <div class="stats">
-    <div class="stat-card">
-      <div class="stat-value">{userCount}</div>
+    <div class="card stat-card">
       <div class="stat-label">Users</div>
+      <div class="stat-value">{userCount}</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-value">{appCount}</div>
+    <div class="card stat-card">
       <div class="stat-label">Apps</div>
+      <div class="stat-value">{appCount}</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-value">{sessionCount}</div>
+    <div class="card stat-card">
       <div class="stat-label">Active Sessions</div>
+      <div class="stat-value">{sessionCount}</div>
     </div>
   </div>
 
-  <h2>Recent Events</h2>
-  {#if recentEvents.length === 0}
-    <p>No audit events yet.</p>
-  {:else}
-    <table>
-      <thead>
-        <tr><th>Time</th><th>Action</th><th>User ID</th><th>IP</th></tr>
-      </thead>
-      <tbody>
-        {#each recentEvents as event}
-          <tr>
-            <td>{event.timestamp}</td>
-            <td>{event.action}</td>
-            <td>{event.user_id || '-'}</td>
-            <td>{event.ip_address}</td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-  {/if}
+  <div class="section">
+    <h2>Recent Events</h2>
+    {#if recentEvents.length === 0}
+      <div class="card empty-state">
+        <p class="muted">No audit events yet.</p>
+      </div>
+    {:else}
+      <div class="card table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Action</th>
+              <th>User ID</th>
+              <th>IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each recentEvents as event}
+              <tr>
+                <td class="muted">{event.timestamp}</td>
+                <td><span class="badge">{event.action}</span></td>
+                <td class="mono">{event.user_id || '\u2014'}</td>
+                <td class="muted">{event.ip_address}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {/if}
+  </div>
 {/if}
 
 <style>
+  .page-header { margin-bottom: 1.5rem; }
+  .page-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: hsl(var(--foreground));
+  }
+  .page-desc {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+  }
+
+  .loading {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.875rem;
+    padding: 2rem;
+  }
+
+  .alert-destructive {
+    background: hsl(var(--destructive) / 0.1);
+    color: hsl(var(--destructive));
+    border: 1px solid hsl(var(--destructive) / 0.2);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+  }
+
   .stats {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
     margin-bottom: 2rem;
   }
+
+  .card {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+  }
+
   .stat-card {
-    background: white;
-    border-radius: 8px;
     padding: 1.5rem;
-    min-width: 140px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    text-align: center;
+  }
+  .stat-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: hsl(var(--muted-foreground));
   }
   .stat-value {
     font-size: 2rem;
-    font-weight: bold;
-    color: #0f3460;
-  }
-  .stat-label {
-    color: #666;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: hsl(var(--foreground));
     margin-top: 0.25rem;
   }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+
+  .section { margin-top: 1.5rem; }
+  .section h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: hsl(var(--foreground));
+    margin-bottom: 0.75rem;
   }
-  th, td {
-    padding: 0.75rem 1rem;
+
+  .table-wrapper { overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
     text-align: left;
-    border-bottom: 1px solid #eee;
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: hsl(var(--muted-foreground));
+    border-bottom: 1px solid hsl(var(--border));
   }
-  th { background: #f9f9f9; font-weight: 600; }
-  .error { color: red; }
+  td {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 9999px;
+    background: hsl(var(--secondary));
+    color: hsl(var(--secondary-foreground));
+  }
+  .mono { font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace; font-size: 0.8125rem; }
+  .muted { color: hsl(var(--muted-foreground)); }
+  .empty-state { padding: 2rem; text-align: center; }
 </style>
