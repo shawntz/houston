@@ -1,7 +1,7 @@
 /target
-minikta.db
-minikta.db-journal
-minikta.db-wal
+houston.db
+houston.db-journal
+houston.db-wal
 config.toml
 keys/
 admin-ui/node_modules/
