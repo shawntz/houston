@@ -35,7 +35,7 @@ pub fn initialize(db_path: &str) -> Result<Connection> {
     Ok(conn)
 }
 
-#[cfg(test)]
+/// Create an in-memory test database with all migrations applied.
 pub fn test_db() -> Connection {
     initialize(":memory:").expect("failed to create test database")
 }

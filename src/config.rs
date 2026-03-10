@@ -107,6 +107,26 @@ fn default_login_max() -> u32 { 5 }
 fn default_login_window() -> u64 { 900 }
 fn default_min_length() -> usize { 12 }
 
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            server: ServerConfig {
+                host: "127.0.0.1".into(),
+                port: 8080,
+                external_url: "https://localhost".into(),
+                require_https: false,
+            },
+            secrets: SecretsConfig {
+                master_secret: "test_secret_0000000000000000000000000000000000000000000000000000".into(),
+            },
+            database: DatabaseConfig::default(),
+            session: SessionConfig::default(),
+            rate_limit: RateLimitConfig::default(),
+            password: PasswordConfig::default(),
+        }
+    }
+}
+
 impl AppConfig {
     pub fn load(path: &str) -> anyhow::Result<Self> {
         let settings = config::Config::builder()
