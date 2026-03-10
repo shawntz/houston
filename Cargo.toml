@@ -1,5 +1,5 @@
 [package]
-name = "minikta"
+name = "houston"
 version = "0.1.0"
 edition = "2021"
 description = "Minimal self-hosted identity provider with OIDC and SAML support"
