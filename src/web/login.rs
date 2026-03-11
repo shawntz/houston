@@ -562,7 +562,7 @@ fn render_login_page(error: Option<&str>, redirect_to: Option<&str>) -> String {
                 </span>
             </button>
         </div>
-        <div class="footer"><a href="https://github.com/shawnschwartz/houston" target="_blank">&copy; Shawn Schwartz 2026 &mdash; All Rights Reserved.</a></div>
+        <div class="footer"><a href="https://github.com/shawntz/houston" target="_blank">&copy; Shawn Schwartz 2026 &mdash; All Rights Reserved.</a></div>
     </div>
     <script>
         const form = document.getElementById('login-form');
