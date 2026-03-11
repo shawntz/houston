@@ -105,7 +105,6 @@ async fn sso_redirect(
             Redirect::to(&redirect).into_response()
         }
         Some(sess) => {
-            // Build SAML Response
             let user = crate::db::users::get_user_by_id(&db, &sess.user_id).ok().flatten();
             let user = match user {
                 Some(u) => u,
@@ -113,74 +112,17 @@ async fn sso_redirect(
             };
 
             let acs_url = app.acs_url.as_deref().unwrap_or("");
-            let issuer_url = &state.config.server.external_url;
-            let now = chrono::Utc::now();
-            let not_on_or_after = (now + chrono::Duration::minutes(5)).format("%Y-%m-%dT%H:%M:%SZ");
-            let instant = now.format("%Y-%m-%dT%H:%M:%SZ");
-            let response_id = format!("_resp_{}", uuid::Uuid::new_v4());
-            let assertion_id = format!("_assert_{}", uuid::Uuid::new_v4());
-
-            let in_response_to = request_id.as_deref().unwrap_or("");
-
-            let saml_response = format!(r#"<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
-  xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
-  ID="{response_id}"
-  InResponseTo="{in_response_to}"
-  IssueInstant="{instant}"
-  Destination="{acs_url}"
-  Version="2.0">
-  <saml:Issuer>{issuer_url}</saml:Issuer>
-  <samlp:Status>
-    <samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success"/>
-  </samlp:Status>
-  <saml:Assertion ID="{assertion_id}" IssueInstant="{instant}" Version="2.0">
-    <saml:Issuer>{issuer_url}</saml:Issuer>
-    <saml:Subject>
-      <saml:NameID Format="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress">{email}</saml:NameID>
-      <saml:SubjectConfirmation Method="urn:oasis:names:tc:SAML:2.0:cm:bearer">
-        <saml:SubjectConfirmationData InResponseTo="{in_response_to}"
-          Recipient="{acs_url}"
-          NotOnOrAfter="{not_on_or_after}"/>
-      </saml:SubjectConfirmation>
-    </saml:Subject>
-    <saml:Conditions NotBefore="{instant}" NotOnOrAfter="{not_on_or_after}">
-      <saml:AudienceRestriction>
-        <saml:Audience>{sp_entity_id}</saml:Audience>
-      </saml:AudienceRestriction>
-    </saml:Conditions>
-    <saml:AuthnStatement AuthnInstant="{instant}">
-      <saml:AuthnContext>
-        <saml:AuthnContextClassRef>urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport</saml:AuthnContextClassRef>
-      </saml:AuthnContext>
-    </saml:AuthnStatement>
-    <saml:AttributeStatement>
-      <saml:Attribute Name="email"><saml:AttributeValue>{email}</saml:AttributeValue></saml:Attribute>
-      <saml:Attribute Name="displayName"><saml:AttributeValue>{display_name}</saml:AttributeValue></saml:Attribute>
-    </saml:AttributeStatement>
-  </saml:Assertion>
-</samlp:Response>"#,
-                email = user.email,
-                display_name = user.display_name,
-                sp_entity_id = app.entity_id.as_deref().unwrap_or(""),
-            );
-
-            // Base64 encode for POST binding
-            let encoded_response = base64::engine::general_purpose::STANDARD.encode(saml_response.as_bytes());
             let relay_state = params.relay_state.as_deref().unwrap_or("");
 
-            // Auto-submit form (HTTP-POST binding)
-            let html = format!(r#"<!DOCTYPE html>
-<html>
-<body onload="document.forms[0].submit()">
-<form method="POST" action="{acs_url}">
-  <input type="hidden" name="SAMLResponse" value="{encoded_response}"/>
-  <input type="hidden" name="RelayState" value="{relay_state}"/>
-  <noscript><button type="submit">Continue</button></noscript>
-</form>
-</body>
-</html>"#);
-
-            Html(html).into_response()
+            match build_signed_saml_post_form(
+                &user, &app, request_id.as_deref(),
+                &state.config.server.external_url,
+                &state.rsa_private_key_der, &state.x509_cert_der,
+                acs_url, relay_state,
+            ) {
+                Ok(html) => Html(html).into_response(),
+                Err(e) => Html(format!("Failed to build SAML response: {e}")).into_response(),
+            }
         }
     }
 }
@@ -257,15 +199,43 @@ async fn sso_continue(
     };
 
     let acs_url = app.acs_url.as_deref().unwrap_or("");
-    let issuer_url = &state.config.server.external_url;
+    let relay_state = pending.relay_state.as_deref().unwrap_or("");
+
+    match build_signed_saml_post_form(
+        &user, &app, request_id.as_deref(),
+        &state.config.server.external_url,
+        &state.rsa_private_key_der, &state.x509_cert_der,
+        acs_url, relay_state,
+    ) {
+        Ok(html) => Html(html).into_response(),
+        Err(e) => Html(format!("Failed to build SAML response: {e}")).into_response(),
+    }
+}
+
+fn build_signed_saml_post_form(
+    user: &crate::db::users::User,
+    app: &crate::db::apps::App,
+    request_id: Option<&str>,
+    issuer_url: &str,
+    rsa_private_key_der: &[u8],
+    x509_cert_der: &[u8],
+    acs_url: &str,
+    relay_state: &str,
+) -> Result<String, String> {
     let now = chrono::Utc::now();
     let not_on_or_after = (now + chrono::Duration::minutes(5)).format("%Y-%m-%dT%H:%M:%SZ");
     let instant = now.format("%Y-%m-%dT%H:%M:%SZ");
     let response_id = format!("_resp_{}", uuid::Uuid::new_v4());
     let assertion_id = format!("_assert_{}", uuid::Uuid::new_v4());
-    let in_response_to = request_id.as_deref().unwrap_or("");
+    let in_response_to = request_id.unwrap_or("");
+    let sp_entity_id = app.entity_id.as_deref().unwrap_or("");
 
-    let saml_response = format!(r#"<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
+    let base64_cert = base64::engine::general_purpose::STANDARD.encode(x509_cert_der);
+
+    // Build SAML Response XML with embedded ds:Signature template
+    let sig_ref_uri = format!("#{response_id}");
+    let saml_response_xml = format!(
+        r##"<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
   xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
   ID="{response_id}"
   InResponseTo="{in_response_to}"
@@ -273,6 +243,26 @@ async fn sso_continue(
   Destination="{acs_url}"
   Version="2.0">
   <saml:Issuer>{issuer_url}</saml:Issuer>
+  <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+    <ds:SignedInfo>
+      <ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+      <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+      <ds:Reference URI="{sig_ref_uri}">
+        <ds:Transforms>
+          <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+          <ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+        </ds:Transforms>
+        <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+        <ds:DigestValue></ds:DigestValue>
+      </ds:Reference>
+    </ds:SignedInfo>
+    <ds:SignatureValue></ds:SignatureValue>
+    <ds:KeyInfo>
+      <ds:X509Data>
+        <ds:X509Certificate>{base64_cert}</ds:X509Certificate>
+      </ds:X509Data>
+    </ds:KeyInfo>
+  </ds:Signature>
   <samlp:Status>
     <samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success"/>
   </samlp:Status>
@@ -301,16 +291,20 @@ async fn sso_continue(
       <saml:Attribute Name="displayName"><saml:AttributeValue>{display_name}</saml:AttributeValue></saml:Attribute>
     </saml:AttributeStatement>
   </saml:Assertion>
-</samlp:Response>"#,
+</samlp:Response>"##,
         email = user.email,
         display_name = user.display_name,
-        sp_entity_id = app.entity_id.as_deref().unwrap_or(""),
     );
 
-    let encoded_response = base64::engine::general_purpose::STANDARD.encode(saml_response.as_bytes());
-    let relay_state = pending.relay_state.as_deref().unwrap_or("");
+    // Sign the XML using xmlsec (fills in DigestValue and SignatureValue)
+    let signed_xml = samael::crypto::sign_xml(saml_response_xml, rsa_private_key_der)
+        .map_err(|e| format!("XML signing failed: {e}"))?;
 
-    let html = format!(r#"<!DOCTYPE html>
+    // Base64 encode for POST binding
+    let encoded_response = base64::engine::general_purpose::STANDARD.encode(signed_xml.as_bytes());
+
+    // Auto-submit form (HTTP-POST binding)
+    Ok(format!(r#"<!DOCTYPE html>
 <html>
 <body onload="document.forms[0].submit()">
 <form method="POST" action="{acs_url}">
@@ -319,9 +313,7 @@ async fn sso_continue(
   <noscript><button type="submit">Continue</button></noscript>
 </form>
 </body>
-</html>"#);
-
-    Html(html).into_response()
+</html>"#))
 }
 
 fn inflate_saml_request(data: &[u8]) -> Option<Vec<u8>> {
@@ -348,8 +340,9 @@ fn extract_issuer(xml: &str) -> Option<String> {
 
 fn extract_request_id(xml: &str) -> Option<String> {
     // Look for ID="..." in AuthnRequest
-    if let Some(start) = xml.find("ID=\"") {
-        let rest = &xml[start + 4..];
+    let needle = r#"ID=""#;
+    if let Some(start) = xml.find(needle) {
+        let rest = &xml[start + needle.len()..];
         if let Some(end) = rest.find('"') {
             return Some(rest[..end].to_string());
         }

@@ -32,10 +32,14 @@ fn test_state() -> (axum::Router, String) {
     let rp_origin = url::Url::parse("https://localhost").unwrap();
     let webauthn = houston::auth::webauthn::build_webauthn("localhost", &rp_origin);
 
+    let rsa = houston::crypto::keys::generate_rsa_keypair_and_cert("https://localhost").unwrap();
+
     let state = Arc::new(houston::server::AppState {
         config,
         db: Mutex::new(conn),
         ed25519_keypair: kp,
+        rsa_private_key_der: rsa.private_key_der,
+        x509_cert_der: rsa.x509_cert_der,
         login_rate_limiter: houston::middleware::rate_limit::RateLimiter::new(10, 60),
         csrf_key,
         webauthn,

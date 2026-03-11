@@ -21,6 +21,8 @@ pub struct AppState {
     pub config: AppConfig,
     pub db: Mutex<Connection>,
     pub ed25519_keypair: Ed25519Keypair,
+    pub rsa_private_key_der: Vec<u8>,
+    pub x509_cert_der: Vec<u8>,
     pub login_rate_limiter: RateLimiter,
     pub csrf_key: Vec<u8>,
     pub webauthn: webauthn_rs::prelude::Webauthn,
@@ -70,6 +72,23 @@ pub async fn run(config: AppConfig) -> anyhow::Result<()> {
         kp
     };
 
+    // Load or generate RSA key + X509 cert for SAML signing
+    let rsa_key_path = format!("{keys_dir}/rsa.key.enc");
+    let rsa_cert_path = format!("{keys_dir}/rsa.cert.der");
+
+    let (rsa_private_key_der, x509_cert_der) = if std::path::Path::new(&rsa_key_path).exists() {
+        tracing::info!("Loading existing RSA signing key");
+        let private_key = crate::crypto::keys::load_encrypted_key(&rsa_key_path, &config.secrets.master_secret)?;
+        let cert = std::fs::read(&rsa_cert_path)?;
+        (private_key, cert)
+    } else {
+        tracing::info!("Generating new RSA signing key and X509 certificate");
+        let rsa = crate::crypto::keys::generate_rsa_keypair_and_cert(&config.server.external_url)?;
+        crate::crypto::keys::save_encrypted_key(&rsa.private_key_der, &rsa_key_path, &config.secrets.master_secret)?;
+        std::fs::write(&rsa_cert_path, &rsa.x509_cert_der)?;
+        (rsa.private_key_der, rsa.x509_cert_der)
+    };
+
     let csrf_key = crate::crypto::hkdf::derive_key(&config.secrets.master_secret, "csrf-tokens", 32)?;
 
     let login_rate_limiter = RateLimiter::new(
@@ -88,6 +107,8 @@ pub async fn run(config: AppConfig) -> anyhow::Result<()> {
         config: config.clone(),
         db: Mutex::new(conn),
         ed25519_keypair,
+        rsa_private_key_der,
+        x509_cert_der,
         login_rate_limiter,
         csrf_key,
         webauthn,

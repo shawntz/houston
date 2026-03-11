@@ -4,6 +4,29 @@ use uuid::Uuid;
 
 use super::hkdf::{encrypt_aes_gcm, decrypt_aes_gcm, derive_key};
 
+pub struct RsaKeypair {
+    pub private_key_der: Vec<u8>,
+    pub x509_cert_der: Vec<u8>,
+}
+
+pub fn generate_rsa_keypair_and_cert(entity_id: &str) -> Result<RsaKeypair> {
+    use samael::idp::{IdentityProvider, KeyType, Rsa, CertificateParams};
+
+    let idp = IdentityProvider::generate_new(KeyType::Rsa(Rsa::Rsa2048))
+        .map_err(|e| anyhow!("failed to generate RSA keypair: {e}"))?;
+
+    let private_key_der = idp.export_private_key_der()
+        .map_err(|e| anyhow!("failed to export RSA private key: {e}"))?;
+
+    let cert_der = idp.create_certificate(&CertificateParams {
+        common_name: entity_id,
+        issuer_name: entity_id,
+        days_until_expiration: 3650,
+    }).map_err(|e| anyhow!("failed to create X509 certificate: {e}"))?;
+
+    Ok(RsaKeypair { private_key_der, x509_cert_der: cert_der })
+}
+
 pub struct Ed25519Keypair {
     pub private_key_pkcs8: Vec<u8>,
     pub public_key_bytes: Vec<u8>,
