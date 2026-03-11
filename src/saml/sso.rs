@@ -83,8 +83,19 @@ async fn sso_redirect(
 
     match valid_session {
         None => {
-            // Redirect to login
-            let redirect = format!("/login?redirect_to={}", urlencoding::encode("/saml/sso"));
+            // Redirect to login, preserving the full SAML query string
+            let mut original_url = "/saml/sso".to_string();
+            let mut query_parts = Vec::new();
+            if let Some(ref req) = params.saml_request {
+                query_parts.push(format!("SAMLRequest={}", urlencoding::encode(req)));
+            }
+            if let Some(ref rs) = params.relay_state {
+                query_parts.push(format!("RelayState={}", urlencoding::encode(rs)));
+            }
+            if !query_parts.is_empty() {
+                original_url = format!("{}?{}", original_url, query_parts.join("&"));
+            }
+            let redirect = format!("/login?redirect_to={}", urlencoding::encode(&original_url));
             Redirect::to(&redirect).into_response()
         }
         Some(sess) => {

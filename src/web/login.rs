@@ -1,5 +1,5 @@
 use axum::{
-    extract::State,
+    extract::{Query, State},
     response::{Html, Redirect, IntoResponse, Response},
     routing::{get, post},
     Form, Router,
@@ -17,8 +17,16 @@ pub fn routes() -> Router<Arc<AppState>> {
         .route("/logout", post(logout))
 }
 
-async fn login_page(State(_state): State<Arc<AppState>>) -> Html<String> {
-    let html = render_login_page(None, None);
+#[derive(Deserialize, Default)]
+struct LoginQuery {
+    redirect_to: Option<String>,
+}
+
+async fn login_page(
+    State(_state): State<Arc<AppState>>,
+    Query(query): Query<LoginQuery>,
+) -> Html<String> {
+    let html = render_login_page(None, query.redirect_to.as_deref());
     Html(html)
 }
 
