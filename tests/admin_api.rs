@@ -40,6 +40,7 @@ fn test_state() -> (axum::Router, String) {
         csrf_key,
         webauthn,
         webauthn_state: houston::auth::webauthn::WebauthnState::new(),
+        pending_saml: std::sync::Mutex::new(std::collections::HashMap::new()),
     });
 
     let cookie = format!("{cookie_name}={token}");

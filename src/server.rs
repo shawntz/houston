@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use axum::Router;
 use rusqlite::Connection;
@@ -10,6 +11,12 @@ use crate::config::AppConfig;
 use crate::crypto::keys::Ed25519Keypair;
 use crate::middleware::rate_limit::RateLimiter;
 
+pub struct PendingSamlRequest {
+    pub saml_request: String,
+    pub relay_state: Option<String>,
+    pub created_at: std::time::Instant,
+}
+
 pub struct AppState {
     pub config: AppConfig,
     pub db: Mutex<Connection>,
@@ -18,6 +25,7 @@ pub struct AppState {
     pub csrf_key: Vec<u8>,
     pub webauthn: webauthn_rs::prelude::Webauthn,
     pub webauthn_state: WebauthnState,
+    pub pending_saml: Mutex<HashMap<String, PendingSamlRequest>>,
 }
 
 pub fn build_router(state: Arc<AppState>) -> Router {
@@ -84,6 +92,7 @@ pub async fn run(config: AppConfig) -> anyhow::Result<()> {
         csrf_key,
         webauthn,
         webauthn_state,
+        pending_saml: Mutex::new(HashMap::new()),
     });
 
     let app = build_router(state);

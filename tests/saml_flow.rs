@@ -23,6 +23,7 @@ fn test_router() -> axum::Router {
         csrf_key,
         webauthn,
         webauthn_state: houston::auth::webauthn::WebauthnState::new(),
+        pending_saml: std::sync::Mutex::new(std::collections::HashMap::new()),
     });
 
     houston::server::build_router(state)
