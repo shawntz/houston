@@ -237,11 +237,14 @@ fn render_login_page(error: Option<&str>, redirect_to: Option<&str>) -> String {
             align-items: center;
             gap: 0.5rem;
         }}
-        .brand-dot {{
-            width: 8px; height: 8px;
-            background: hsl(var(--accent));
-            border-radius: 50%;
-            animation: pulse-ring 2s ease-in-out infinite;
+        .brand-tagline {{
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: hsl(var(--muted-foreground));
+            margin-top: -1.5rem;
+            margin-bottom: 2rem;
+            letter-spacing: 0.04em;
+            animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
         }}
 
         .card {{
@@ -504,11 +507,20 @@ fn render_login_page(error: Option<&str>, redirect_to: Option<&str>) -> String {
             color: hsl(var(--muted-foreground) / 0.5);
             animation: fadeIn 0.5s ease 0.6s both;
         }}
+        .footer a {{
+            color: inherit;
+            text-decoration: none;
+            transition: color 0.2s;
+        }}
+        .footer a:hover {{
+            color: hsl(var(--muted-foreground));
+        }}
     </style>
 </head>
 <body>
     <div class="scene">
-        <div class="brand"><span class="brand-dot"></span> houston</div>
+        <div class="brand">🚀 Houston SSO</div>
+        <div class="brand-tagline">Ready for Launch...</div>
         <div class="card" id="card">
             <div class="loading-overlay" id="loading">
                 <div class="spinner-container">
@@ -550,7 +562,7 @@ fn render_login_page(error: Option<&str>, redirect_to: Option<&str>) -> String {
                 </span>
             </button>
         </div>
-        <div class="footer">Secured by houston</div>
+        <div class="footer"><a href="https://github.com/shawnschwartz/houston" target="_blank">&copy; Shawn Schwartz 2026 &mdash; All Rights Reserved.</a></div>
     </div>
     <script>
         const form = document.getElementById('login-form');
