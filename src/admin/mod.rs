@@ -1,4 +1,5 @@
 pub mod apps;
+pub mod assignments;
 pub mod audit;
 pub mod sessions;
 pub mod spa;

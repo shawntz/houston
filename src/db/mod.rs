@@ -2,6 +2,7 @@ pub mod users;
 pub mod apps;
 pub mod sessions;
 pub mod audit;
+pub mod assignments;
 
 use std::path::Path;
 use rusqlite::Connection;

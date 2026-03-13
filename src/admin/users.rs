@@ -71,7 +71,7 @@ fn extract_session_token(headers: &axum::http::HeaderMap, cookie_name: &str) -> 
         })
 }
 
-fn error_response(error: &str, status: u16) -> Response {
+pub fn error_response(error: &str, status: u16) -> Response {
     let body = serde_json::json!({ "error": error });
     Response::builder()
         .status(status)

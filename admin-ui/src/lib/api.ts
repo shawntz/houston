@@ -39,6 +39,13 @@ export const deleteApp = (id: string) =>
 export const rotateAppSecret = (id: string) =>
   request<any>(`/apps/${id}/rotate-secret`, { method: 'POST' });
 
+// App User Assignments
+export const getAppUsers = (appId: string) => request<any[]>(`/apps/${appId}/users`);
+export const assignUserToApp = (appId: string, userId: string) =>
+  request<void>(`/apps/${appId}/users/${userId}`, { method: 'POST' });
+export const unassignUserFromApp = (appId: string, userId: string) =>
+  request<void>(`/apps/${appId}/users/${userId}`, { method: 'DELETE' });
+
 // Sessions
 export const listSessions = () => request<any[]>('/sessions');
 export const revokeSession = (id: string) =>

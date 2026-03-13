@@ -7,7 +7,7 @@ use std::sync::Mutex;
 use houston::config::AppConfig;
 use houston::db;
 use houston::auth::{password, session};
-use houston::db::{users, sessions, apps};
+use houston::db::{users, sessions, apps, assignments};
 
 fn test_state_with_app() -> (axum::Router, String, String) {
     let conn = db::test_db();
@@ -30,6 +30,9 @@ fn test_state_with_app() -> (axum::Router, String, String) {
         redirect_uris: vec!["https://app.test/callback".into()],
     }).unwrap();
     let client_id = app.client_id.clone().unwrap();
+
+    // Assign user to app (required for access)
+    assignments::assign_user_to_app(&conn, &user.id, &app.id).unwrap();
 
     let config = AppConfig::default();
     let cookie_name = config.session.cookie_name.clone();

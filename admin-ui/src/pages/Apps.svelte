@@ -1,10 +1,16 @@
 <script lang="ts">
-  import { listApps, createApp, deleteApp, rotateAppSecret } from '../lib/api';
+  import { listApps, createApp, deleteApp, rotateAppSecret, getAppUsers, assignUserToApp, unassignUserFromApp, listUsers } from '../lib/api';
 
   let apps: any[] = $state([]);
   let loading = $state(true);
   let error: string | null = $state(null);
   let showCreate = $state(false);
+
+  // Assignment management
+  let expandedAppId: string | null = $state(null);
+  let assignedUsers: any[] = $state([]);
+  let allUsers: any[] = $state([]);
+  let assignLoading = $state(false);
 
   let form = $state({
     name: '',
@@ -58,6 +64,40 @@
     try {
       await rotateAppSecret(id);
       await load();
+    } catch (e: any) {
+      error = e.message;
+    }
+  }
+
+  async function toggleAssignments(appId: string) {
+    if (expandedAppId === appId) {
+      expandedAppId = null;
+      return;
+    }
+    expandedAppId = appId;
+    assignLoading = true;
+    try {
+      [assignedUsers, allUsers] = await Promise.all([getAppUsers(appId), listUsers()]);
+    } catch (e: any) {
+      error = e.message;
+    } finally {
+      assignLoading = false;
+    }
+  }
+
+  async function handleAssign(appId: string, userId: string) {
+    try {
+      await assignUserToApp(appId, userId);
+      assignedUsers = await getAppUsers(appId);
+    } catch (e: any) {
+      error = e.message;
+    }
+  }
+
+  async function handleUnassign(appId: string, userId: string) {
+    try {
+      await unassignUserFromApp(appId, userId);
+      assignedUsers = await getAppUsers(appId);
     } catch (e: any) {
       error = e.message;
     }
@@ -147,12 +187,55 @@
             <td><span class="badge badge-protocol">{app.protocol.toUpperCase()}</span></td>
             <td class="mono">{app.client_id || app.entity_id || '\u2014'}</td>
             <td class="actions-col">
+              <button class="btn btn-outline btn-sm" onclick={() => toggleAssignments(app.id)}>
+                {expandedAppId === app.id ? 'Hide Users' : 'Users'}
+              </button>
               {#if app.protocol === 'oidc'}
                 <button class="btn btn-outline btn-sm" onclick={() => handleRotate(app.id)}>Rotate ID</button>
               {/if}
               <button class="btn btn-destructive btn-sm" onclick={() => handleDelete(app.id)}>Delete</button>
             </td>
           </tr>
+          {#if expandedAppId === app.id}
+            <tr class="assignment-row">
+              <td colspan="4">
+                <div class="assignment-panel">
+                  <h4>Assigned Users</h4>
+                  {#if assignLoading}
+                    <p class="muted">Loading...</p>
+                  {:else}
+                    {#if assignedUsers.length > 0}
+                      <div class="assigned-list">
+                        {#each assignedUsers as u}
+                          <div class="assigned-chip">
+                            <span>{u.display_name} ({u.email})</span>
+                            <button class="chip-remove" onclick={() => handleUnassign(app.id, u.id)} title="Unassign">&times;</button>
+                          </div>
+                        {/each}
+                      </div>
+                    {:else}
+                      <p class="muted">No users assigned.</p>
+                    {/if}
+                    {@const unassignedUsers = allUsers.filter((u: any) => !assignedUsers.some((a: any) => a.id === u.id))}
+                    {#if unassignedUsers.length > 0}
+                      <div class="assign-actions">
+                        <select id="assign-select-{app.id}" class="assign-select">
+                          <option value="">Select a user...</option>
+                          {#each unassignedUsers as u}
+                            <option value={u.id}>{u.display_name} ({u.username})</option>
+                          {/each}
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick={() => {
+                          const sel = document.getElementById(`assign-select-${app.id}`) as HTMLSelectElement;
+                          if (sel?.value) handleAssign(app.id, sel.value);
+                        }}>Assign</button>
+                      </div>
+                    {/if}
+                  {/if}
+                </div>
+              </td>
+            </tr>
+          {/if}
         {/each}
       </tbody>
     </table>
@@ -245,4 +328,24 @@
   .font-medium { font-weight: 500; }
   .muted { color: hsl(var(--muted-foreground)); }
   .empty-state { padding: 2rem; text-align: center; }
+
+  .assignment-row td { background: hsl(var(--muted) / 0.3); padding: 0; }
+  .assignment-panel { padding: 1rem 1.5rem; }
+  .assignment-panel h4 { font-size: 0.8125rem; font-weight: 600; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: hsl(var(--muted-foreground)); }
+  .assigned-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .assigned-chip {
+    display: inline-flex; align-items: center; gap: 0.375rem;
+    background: hsl(var(--secondary)); padding: 0.25rem 0.625rem; border-radius: 9999px;
+    font-size: 0.8125rem; color: hsl(var(--foreground));
+  }
+  .chip-remove {
+    background: none; border: none; cursor: pointer; font-size: 1rem; line-height: 1;
+    color: hsl(var(--muted-foreground)); padding: 0 0.125rem;
+  }
+  .chip-remove:hover { color: hsl(var(--destructive)); }
+  .assign-actions { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem; }
+  .assign-select {
+    padding: 0.375rem 0.625rem; border: 1px solid hsl(var(--input)); border-radius: var(--radius);
+    font-size: 0.8125rem; font-family: inherit; background: transparent; min-width: 220px;
+  }
 </style>

@@ -9,7 +9,7 @@ use serde::Deserialize;
 use std::sync::Arc;
 use crate::server::AppState;
 use crate::auth::session;
-use crate::db::{apps, sessions};
+use crate::db::{apps, assignments, sessions};
 
 pub fn routes() -> Router<Arc<AppState>> {
     Router::new()
@@ -105,6 +105,13 @@ async fn sso_redirect(
             Redirect::to(&redirect).into_response()
         }
         Some(sess) => {
+            // Check user is assigned to this app
+            let assigned = assignments::is_user_assigned_to_app(&db, &sess.user_id, &app.id)
+                .unwrap_or(false);
+            if !assigned {
+                return Html(render_access_denied_page(&app.name)).into_response();
+            }
+
             let user = crate::db::users::get_user_by_id(&db, &sess.user_id).ok().flatten();
             let user = match user {
                 Some(u) => u,
@@ -191,6 +198,13 @@ async fn sso_continue(
         Some(a) => a,
         None => return Html("Unknown service provider".to_string()).into_response(),
     };
+
+    // Check user is assigned to this app
+    let assigned = assignments::is_user_assigned_to_app(&db, &sess.user_id, &app.id)
+        .unwrap_or(false);
+    if !assigned {
+        return Html(render_access_denied_page(&app.name)).into_response();
+    }
 
     let user = crate::db::users::get_user_by_id(&db, &sess.user_id).ok().flatten();
     let user = match user {
@@ -314,6 +328,28 @@ fn build_signed_saml_post_form(
 </form>
 </body>
 </html>"#))
+}
+
+fn render_access_denied_page(app_name: &str) -> String {
+    format!(r#"<!DOCTYPE html>
+<html>
+<head><title>Access Denied</title>
+<style>
+  body {{ font-family: system-ui, sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f5f5f5; }}
+  .card {{ background: white; border-radius: 12px; padding: 2rem; max-width: 420px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
+  h1 {{ color: #d32f2f; font-size: 1.5rem; }}
+  p {{ color: #555; line-height: 1.6; }}
+  .version {{ margin-top: 1.5rem; font-size: 0.6875rem; color: #999; }}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Access Denied</h1>
+  <p>You are not assigned to <strong>{app_name}</strong>. Please contact your administrator to request access.</p>
+</div>
+<div class="version">houston v{version}</div>
+</body>
+</html>"#, app_name = app_name, version = env!("CARGO_PKG_VERSION"))
 }
 
 fn inflate_saml_request(data: &[u8]) -> Option<Vec<u8>> {

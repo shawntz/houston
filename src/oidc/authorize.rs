@@ -9,7 +9,7 @@ use serde::Deserialize;
 use std::sync::Arc;
 use crate::server::AppState;
 use crate::auth::session;
-use crate::db::{apps, sessions};
+use crate::db::{apps, assignments, sessions};
 
 pub fn routes() -> Router<Arc<AppState>> {
     Router::new()
@@ -106,6 +106,13 @@ async fn authorize(
             Redirect::to(&login_url).into_response()
         }
         Some(sess) => {
+            // Check user is assigned to this app
+            let assigned = assignments::is_user_assigned_to_app(&db, &sess.user_id, &app.id)
+                .unwrap_or(false);
+            if !assigned {
+                return error_redirect(&params.redirect_uri, "access_denied: user is not assigned to this application", params.state.as_deref());
+            }
+
             // Generate authorization code
             let code = session::generate_session_token(); // reuse random token gen
             let code_hash = hex::encode(digest::digest(&digest::SHA256, code.as_bytes()));
