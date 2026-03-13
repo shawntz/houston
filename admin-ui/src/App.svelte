@@ -4,8 +4,10 @@
   import Apps from './pages/Apps.svelte';
   import Sessions from './pages/Sessions.svelte';
   import AuditLog from './pages/AuditLog.svelte';
+  import { getVersion } from './lib/api';
 
   let currentPage = $state('dashboard');
+  let version = $state('');
 
   function navigate(page: string) {
     currentPage = page;
@@ -21,6 +23,9 @@
       if (h) currentPage = h;
     };
     window.addEventListener('hashchange', handler);
+
+    getVersion().then(v => version = v.version).catch(() => {});
+
     return () => window.removeEventListener('hashchange', handler);
   });
 
@@ -54,6 +59,9 @@
       <form method="POST" action="/logout">
         <button type="submit" class="nav-item logout-btn">Sign out</button>
       </form>
+      {#if version}
+        <div class="sidebar-version">v{version}</div>
+      {/if}
     </div>
   </aside>
 
@@ -153,6 +161,13 @@
   .logout-btn {
     color: hsl(var(--muted-foreground));
     font-size: 0.875rem;
+  }
+
+  .sidebar-version {
+    padding: 0.5rem 0.75rem 0;
+    font-size: 0.6875rem;
+    color: hsl(var(--muted-foreground));
+    opacity: 0.5;
   }
 
   .content {

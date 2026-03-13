@@ -16,6 +16,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
+// Version
+export const getVersion = () => request<{ version: string }>('/version');
+
 // Users
 export const listUsers = () => request<any[]>('/users');
 export const getUser = (id: string) => request<any>(`/users/${id}`);

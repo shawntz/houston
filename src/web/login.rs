@@ -515,6 +515,11 @@ fn render_login_page(error: Option<&str>, redirect_to: Option<&str>) -> String {
         .footer a:hover {{
             color: hsl(var(--muted-foreground));
         }}
+        .version {{
+            margin-top: 0.25rem;
+            font-size: 0.6875rem;
+            opacity: 0.6;
+        }}
     </style>
 </head>
 <body>
@@ -562,7 +567,7 @@ fn render_login_page(error: Option<&str>, redirect_to: Option<&str>) -> String {
                 </span>
             </button>
         </div>
-        <div class="footer"><a href="https://github.com/shawntz/houston" target="_blank">&copy; Shawn Schwartz 2026 &mdash; All Rights Reserved.</a></div>
+        <div class="footer"><a href="https://github.com/shawntz/houston" target="_blank">&copy; Shawn Schwartz 2026 &mdash; All Rights Reserved.</a><div class="version">v{version}</div></div>
     </div>
     <script>
         const form = document.getElementById('login-form');
@@ -590,5 +595,5 @@ fn render_login_page(error: Option<&str>, redirect_to: Option<&str>) -> String {
         }}
     </script>
 </body>
-</html>"#)
+</html>"#, version = env!("CARGO_PKG_VERSION"))
 }
