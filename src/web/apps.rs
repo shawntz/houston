@@ -376,6 +376,8 @@ async fn app_drawer(
             gap: 0.875rem;
         }}
         .app-card {{
+            position: relative;
+            z-index: 10;
             background: hsl(var(--space-surface) / 0.65);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
