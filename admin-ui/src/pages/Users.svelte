@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { listUsers, createUser, updateUser, deleteUser } from '../lib/api';
+  import { listUsers, createUser, updateUser, deleteUser, startPasskeyRegistration, finishPasskeyRegistration } from '../lib/api';
 
   let users: any[] = $state([]);
   let loading = $state(true);
   let error: string | null = $state(null);
   let showCreate = $state(false);
+  let passkeyStatus: string | null = $state(null);
 
   let form = $state({
     username: '',
@@ -67,6 +68,55 @@
     }
   }
 
+  function b64urlToBytes(b64url: string): Uint8Array {
+    const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = b64.length % 4 === 0 ? '' : '='.repeat(4 - b64.length % 4);
+    const bin = atob(b64 + pad);
+    return Uint8Array.from(bin, (c: string) => c.charCodeAt(0));
+  }
+  function bytesToB64url(bytes: ArrayBuffer): string {
+    const bin = Array.from(new Uint8Array(bytes)).map(b => String.fromCharCode(b)).join('');
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  async function registerPasskey(userId: string) {
+    passkeyStatus = 'Starting registration...';
+    try {
+      const options = await startPasskeyRegistration(userId);
+      const publicKey = options.publicKey;
+      publicKey.challenge = b64urlToBytes(publicKey.challenge);
+      publicKey.user.id = b64urlToBytes(publicKey.user.id);
+      if (publicKey.excludeCredentials) {
+        publicKey.excludeCredentials = publicKey.excludeCredentials.map((c: any) => ({
+          ...c, id: b64urlToBytes(c.id),
+        }));
+      }
+
+      passkeyStatus = 'Waiting for authenticator...';
+      const cred = await navigator.credentials.create({ publicKey }) as PublicKeyCredential;
+      const response = cred.response as AuthenticatorAttestationResponse;
+
+      const credential = {
+        id: cred.id,
+        rawId: bytesToB64url(cred.rawId),
+        type: cred.type,
+        response: {
+          attestationObject: bytesToB64url(response.attestationObject),
+          clientDataJSON: bytesToB64url(response.clientDataJSON),
+        },
+      };
+
+      const name = prompt('Name this passkey (e.g., "MacBook Touch ID"):', 'Security Key');
+      await finishPasskeyRegistration(userId, credential, name || 'Security Key');
+      passkeyStatus = null;
+      await load();
+    } catch (e: any) {
+      passkeyStatus = null;
+      if (e.name === 'NotAllowedError') return;
+      error = e.message || 'Passkey registration failed';
+    }
+  }
+
   $effect(() => { load(); });
 </script>
 
@@ -86,6 +136,12 @@
   <div class="alert alert-destructive">
     <span>{error}</span>
     <button class="btn btn-ghost btn-sm" onclick={() => error = null}>Dismiss</button>
+  </div>
+{/if}
+
+{#if passkeyStatus}
+  <div class="alert alert-info">
+    <span>{passkeyStatus}</span>
   </div>
 {/if}
 
@@ -162,6 +218,7 @@
               <td><span class="badge" class:badge-active={user.is_admin}>{user.is_admin ? 'Yes' : 'No'}</span></td>
               <td><span class="badge" class:badge-active={user.has_totp}>{user.has_totp ? 'Enabled' : 'Off'}</span></td>
               <td class="actions-col">
+                <button class="btn btn-outline btn-sm" onclick={() => registerPasskey(user.id)}>Passkey</button>
                 <button class="btn btn-outline btn-sm" onclick={() => startEdit(user)}>Edit</button>
                 <button class="btn btn-destructive btn-sm" onclick={() => handleDelete(user.id)}>Delete</button>
               </td>
@@ -190,6 +247,12 @@
     display: flex; justify-content: space-between; align-items: center;
     background: hsl(var(--destructive) / 0.1); color: hsl(var(--destructive));
     border: 1px solid hsl(var(--destructive) / 0.2); padding: 0.75rem 1rem;
+    border-radius: var(--radius); font-size: 0.875rem; margin-bottom: 1rem;
+  }
+
+  .alert-info {
+    background: hsl(var(--primary) / 0.1); color: hsl(var(--primary));
+    border: 1px solid hsl(var(--primary) / 0.2); padding: 0.75rem 1rem;
     border-radius: var(--radius); font-size: 0.875rem; margin-bottom: 1rem;
   }
 

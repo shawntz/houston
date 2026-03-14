@@ -46,6 +46,15 @@ export const assignUserToApp = (appId: string, userId: string) =>
 export const unassignUserFromApp = (appId: string, userId: string) =>
   request<void>(`/apps/${appId}/users/${userId}`, { method: 'DELETE' });
 
+// WebAuthn / Passkeys
+export const startPasskeyRegistration = (userId: string) =>
+  request<any>(`/users/${userId}/webauthn/register-start`, { method: 'POST' });
+export const finishPasskeyRegistration = (userId: string, credential: any, name?: string) =>
+  request<any>(`/users/${userId}/webauthn/register-finish`, {
+    method: 'POST',
+    body: JSON.stringify({ credential, name }),
+  });
+
 // Sessions
 export const listSessions = () => request<any[]>('/sessions');
 export const revokeSession = (id: string) =>

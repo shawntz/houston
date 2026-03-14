@@ -590,8 +590,100 @@ fn render_login_page(error: Option<&str>, redirect_to: Option<&str>) -> String {
             // If the server returns an error page, the loading state resets.
         }});
 
+        // Base64URL helpers for WebAuthn
+        function b64urlToBytes(b64url) {{
+            const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+            const pad = b64.length % 4 === 0 ? '' : '='.repeat(4 - b64.length % 4);
+            const bin = atob(b64 + pad);
+            return Uint8Array.from(bin, c => c.charCodeAt(0));
+        }}
+        function bytesToB64url(bytes) {{
+            const bin = Array.from(new Uint8Array(bytes)).map(b => String.fromCharCode(b)).join('');
+            return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }}
+
         async function startPasskeyAuth() {{
-            // WebAuthn flow will be implemented in a later task
+            const username = document.getElementById('username').value.trim();
+            if (!username) {{
+                card.classList.add('shake');
+                card.addEventListener('animationend', () => card.classList.remove('shake'), {{ once: true }});
+                return;
+            }}
+
+            loading.classList.add('active');
+
+            try {{
+                // Step 1: Get challenge from server
+                const challengeRes = await fetch('/login/webauthn/challenge', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ username }}),
+                }});
+                if (!challengeRes.ok) {{
+                    const err = await challengeRes.json().catch(() => ({{}}));
+                    throw new Error(err.error || 'Failed to get challenge');
+                }}
+                const {{ challenge, user_id }} = await challengeRes.json();
+
+                // Step 2: Convert challenge for browser API
+                const publicKey = challenge.publicKey;
+                publicKey.challenge = b64urlToBytes(publicKey.challenge);
+                if (publicKey.allowCredentials) {{
+                    publicKey.allowCredentials = publicKey.allowCredentials.map(c => ({{
+                        ...c,
+                        id: b64urlToBytes(c.id),
+                    }}));
+                }}
+
+                // Step 3: Prompt user (Touch ID, etc.)
+                const assertion = await navigator.credentials.get({{ publicKey }});
+
+                // Step 4: Send assertion to server
+                const credential = {{
+                    id: assertion.id,
+                    rawId: bytesToB64url(assertion.rawId),
+                    type: assertion.type,
+                    response: {{
+                        authenticatorData: bytesToB64url(assertion.response.authenticatorData),
+                        clientDataJSON: bytesToB64url(assertion.response.clientDataJSON),
+                        signature: bytesToB64url(assertion.response.signature),
+                        userHandle: assertion.response.userHandle ? bytesToB64url(assertion.response.userHandle) : null,
+                    }},
+                }};
+
+                const verifyRes = await fetch('/login/webauthn/verify', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ user_id, credential }}),
+                }});
+                if (!verifyRes.ok) {{
+                    const err = await verifyRes.json().catch(() => ({{}}));
+                    throw new Error(err.error || 'Authentication failed');
+                }}
+
+                // Success — show check animation then redirect
+                loading.classList.remove('active');
+                success.classList.add('active');
+                const redirectTo = document.querySelector('input[name="redirect_to"]');
+                setTimeout(() => {{
+                    window.location.href = redirectTo ? redirectTo.value : '/admin';
+                }}, 1200);
+
+            }} catch (err) {{
+                loading.classList.remove('active');
+                if (err.name === 'NotAllowedError') return; // user cancelled
+                // Show inline error
+                let alertEl = document.querySelector('.alert');
+                if (!alertEl) {{
+                    alertEl = document.createElement('div');
+                    alertEl.className = 'alert';
+                    const cardTitle = document.querySelector('.card-title');
+                    cardTitle.parentNode.insertBefore(alertEl, cardTitle.nextSibling.nextSibling);
+                }}
+                alertEl.textContent = err.message || 'Passkey authentication failed.';
+                card.classList.add('shake');
+                card.addEventListener('animationend', () => card.classList.remove('shake'), {{ once: true }});
+            }}
         }}
     </script>
 </body>
