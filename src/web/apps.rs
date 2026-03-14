@@ -81,25 +81,44 @@ async fn app_drawer(
             };
             let badge_label = app.protocol.to_uppercase();
 
-            let app_url = match app.protocol.as_str() {
-                "bookmark" => app.bookmark_url.clone().unwrap_or_default(),
-                "oidc" => {
-                    // Extract origin from first redirect_uri (stored as JSON array)
-                    app.redirect_uris.as_deref()
-                        .and_then(|uris| serde_json::from_str::<Vec<String>>(uris).ok())
-                        .and_then(|v| v.into_iter().next())
-                        .and_then(|u| url::Url::parse(&u).ok())
-                        .map(|u| format!("{}://{}", u.scheme(), u.host_str().unwrap_or("")))
-                        .unwrap_or_default()
+            // Resolve app URL: launch_url template > bookmark_url > derived origin
+            let app_url = if let Some(ref launch) = app.launch_url {
+                launch
+                    .replace("{{email}}", &user.email)
+                    .replace("{{username}}", &user.username)
+                    .replace("{{name}}", &user.display_name)
+            } else {
+                match app.protocol.as_str() {
+                    "bookmark" => app.bookmark_url.clone().unwrap_or_default(),
+                    "oidc" => {
+                        app.redirect_uris.as_deref()
+                            .and_then(|uris| serde_json::from_str::<Vec<String>>(uris).ok())
+                            .and_then(|v| v.into_iter().next())
+                            .and_then(|u| url::Url::parse(&u).ok())
+                            .map(|u| format!("{}://{}", u.scheme(), u.host_str().unwrap_or("")))
+                            .unwrap_or_default()
+                    }
+                    "saml" => {
+                        app.acs_url.as_deref()
+                            .and_then(|u| url::Url::parse(u).ok())
+                            .map(|u| format!("{}://{}", u.scheme(), u.host_str().unwrap_or("")))
+                            .unwrap_or_default()
+                    }
+                    _ => String::new(),
                 }
-                "saml" => {
-                    // Extract origin from acs_url
-                    app.acs_url.as_deref()
-                        .and_then(|u| url::Url::parse(u).ok())
-                        .map(|u| format!("{}://{}", u.scheme(), u.host_str().unwrap_or("")))
-                        .unwrap_or_default()
-                }
-                _ => String::new(),
+            };
+
+            // Render orb: icon image or initial letter
+            let orb_html = if let Some(ref icon) = app.icon_url {
+                format!(
+                    r#"<div class="app-orb {orb_class}"><img src="{icon}" alt="" class="app-icon" /></div>"#,
+                    orb_class = orb_class, icon = icon,
+                )
+            } else {
+                format!(
+                    r#"<div class="app-orb {orb_class}"><span>{initial}</span></div>"#,
+                    orb_class = orb_class, initial = initial,
+                )
             };
 
             let right_icon = if app.protocol == "bookmark" {
@@ -111,29 +130,29 @@ async fn app_drawer(
             if app_url.is_empty() {
                 html.push_str(&format!(
                     r#"<div class="app-card" style="--i:{i}">
-                        <div class="app-orb {orb_class}"><span>{initial}</span></div>
+                        {orb}
                         <div class="app-info">
                             <div class="app-name">{name}</div>
                             <span class="badge {badge_class}">{badge_label}</span>
                         </div>
                         {right_icon}
                     </div>"#,
-                    initial = initial, name = app.name,
-                    orb_class = orb_class, badge_class = badge_class, badge_label = badge_label,
+                    orb = orb_html, name = app.name,
+                    badge_class = badge_class, badge_label = badge_label,
                     right_icon = right_icon, i = i,
                 ));
             } else {
                 html.push_str(&format!(
                     r#"<a href="{url}" target="_blank" rel="noopener noreferrer" class="app-card app-card-link" style="--i:{i}">
-                        <div class="app-orb {orb_class}"><span>{initial}</span></div>
+                        {orb}
                         <div class="app-info">
                             <div class="app-name">{name}</div>
                             <span class="badge {badge_class}">{badge_label}</span>
                         </div>
                         {right_icon}
                     </a>"#,
-                    url = app_url, initial = initial, name = app.name,
-                    orb_class = orb_class, badge_class = badge_class, badge_label = badge_label,
+                    url = app_url, orb = orb_html, name = app.name,
+                    badge_class = badge_class, badge_label = badge_label,
                     right_icon = right_icon, i = i,
                 ));
             }
@@ -447,6 +466,12 @@ async fn app_drawer(
             font-size: 1rem;
             font-weight: 700;
             color: white;
+        }}
+        .app-icon {{
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
         }}
         .orb-oidc {{
             background: linear-gradient(135deg, hsl(var(--glow-blue)), hsl(var(--glow-cyan)));

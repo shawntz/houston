@@ -67,7 +67,7 @@ mod tests {
         let app = apps::create_app(&conn, &apps::CreateApp::Oidc {
             name: "App".into(),
             redirect_uris: vec![],
-        }).unwrap();
+        }, None, None).unwrap();
         (conn, user.id, app.id)
     }
 

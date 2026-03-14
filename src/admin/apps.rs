@@ -1,7 +1,7 @@
 use axum::{
     extract::{Path, State},
     response::{IntoResponse, Json, Response},
-    routing::{delete, get, post},
+    routing::{get, post},
     Router,
 };
 use serde::Deserialize;
@@ -11,10 +11,8 @@ use crate::server::AppState;
 
 pub fn routes() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/api/admin/apps", get(list_apps))
-        .route("/api/admin/apps", post(create_app))
-        .route("/api/admin/apps/{id}", get(get_app))
-        .route("/api/admin/apps/{id}", delete(delete_app))
+        .route("/api/admin/apps", get(list_apps).post(create_app))
+        .route("/api/admin/apps/{id}", get(get_app).delete(delete_app).put(update_app))
         .route("/api/admin/apps/{id}/rotate-secret", post(rotate_secret))
 }
 
@@ -29,6 +27,15 @@ struct CreateAppRequest {
     acs_url: Option<String>,
     // Bookmark fields
     bookmark_url: Option<String>,
+    // Common optional fields
+    icon_url: Option<String>,
+    launch_url: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct UpdateAppRequest {
+    icon_url: Option<String>,
+    launch_url: Option<String>,
 }
 
 async fn list_apps(
@@ -105,8 +112,11 @@ async fn create_app(
         _ => return error_response("protocol must be 'oidc', 'saml', or 'bookmark'", 400),
     };
 
+    let icon = body.icon_url.as_deref();
+    let launch = body.launch_url.as_deref();
+
     let db = state.db.lock().unwrap();
-    match apps::create_app(&db, &create) {
+    match apps::create_app(&db, &create, icon, launch) {
         Ok(app) => {
             let mut resp = Json(app).into_response();
             *resp.status_mut() = axum::http::StatusCode::CREATED;
@@ -137,6 +147,24 @@ async fn delete_app(
             .status(204)
             .body(axum::body::Body::empty())
             .unwrap(),
+        Err(_) => error_response("internal_error", 500),
+    }
+}
+
+async fn update_app(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    headers: axum::http::HeaderMap,
+    Json(body): Json<UpdateAppRequest>,
+) -> Response {
+    if let Err(e) = super::users::require_admin_from_headers(&state, &headers) {
+        return e;
+    }
+
+    let db = state.db.lock().unwrap();
+    match apps::update_app_settings(&db, &id, body.icon_url.as_deref(), body.launch_url.as_deref()) {
+        Ok(Some(app)) => Json(app).into_response(),
+        Ok(None) => error_response("not_found", 404),
         Err(_) => error_response("internal_error", 500),
     }
 }

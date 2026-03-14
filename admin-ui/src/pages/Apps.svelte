@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { listApps, createApp, deleteApp, rotateAppSecret, getAppUsers, assignUserToApp, unassignUserFromApp, listUsers } from '../lib/api';
+  import { listApps, createApp, updateApp, deleteApp, rotateAppSecret, getAppUsers, assignUserToApp, unassignUserFromApp, listUsers } from '../lib/api';
 
   let apps: any[] = $state([]);
   let loading = $state(true);
@@ -12,6 +12,10 @@
   let allUsers: any[] = $state([]);
   let assignLoading = $state(false);
 
+  // Settings/edit management
+  let editAppId: string | null = $state(null);
+  let editForm = $state({ icon_url: '', launch_url: '' });
+
   let form = $state({
     name: '',
     protocol: 'oidc',
@@ -19,6 +23,8 @@
     entity_id: '',
     acs_url: '',
     bookmark_url: '',
+    icon_url: '',
+    launch_url: '',
   });
 
   async function load() {
@@ -43,9 +49,11 @@
       } else if (form.protocol === 'bookmark') {
         data.bookmark_url = form.bookmark_url;
       }
+      if (form.icon_url) data.icon_url = form.icon_url;
+      if (form.launch_url) data.launch_url = form.launch_url;
       await createApp(data);
       showCreate = false;
-      form = { name: '', protocol: 'oidc', redirect_uris: '', entity_id: '', acs_url: '', bookmark_url: '' };
+      form = { name: '', protocol: 'oidc', redirect_uris: '', entity_id: '', acs_url: '', bookmark_url: '', icon_url: '', launch_url: '' };
       await load();
     } catch (e: any) {
       error = e.message;
@@ -73,6 +81,7 @@
   }
 
   async function toggleAssignments(appId: string) {
+    editAppId = null;
     if (expandedAppId === appId) {
       expandedAppId = null;
       return;
@@ -85,6 +94,32 @@
       error = e.message;
     } finally {
       assignLoading = false;
+    }
+  }
+
+  function toggleEdit(app: any) {
+    expandedAppId = null;
+    if (editAppId === app.id) {
+      editAppId = null;
+      return;
+    }
+    editAppId = app.id;
+    editForm = {
+      icon_url: app.icon_url || '',
+      launch_url: app.launch_url || '',
+    };
+  }
+
+  async function handleSaveSettings(appId: string) {
+    try {
+      await updateApp(appId, {
+        icon_url: editForm.icon_url || null,
+        launch_url: editForm.launch_url || null,
+      });
+      editAppId = null;
+      await load();
+    } catch (e: any) {
+      error = e.message;
     }
   }
 
@@ -167,6 +202,20 @@
             <input id="app-bookmark-url" type="url" bind:value={form.bookmark_url} placeholder="https://example.com" />
           </div>
         {/if}
+        <hr class="divider" />
+        <div class="field">
+          <label for="app-icon-url">Icon URL <span class="hint">optional &mdash; app logo image</span></label>
+          <div class="icon-input-row">
+            <input id="app-icon-url" type="url" bind:value={form.icon_url} placeholder="https://example.com/icon.png" />
+            {#if form.icon_url}
+              <img src={form.icon_url} alt="Preview" class="icon-preview" />
+            {/if}
+          </div>
+        </div>
+        <div class="field">
+          <label for="app-launch-url">Launch URL <span class="hint">optional &mdash; template with {'{{email}}'}, {'{{username}}'}, {'{{name}}'}</span></label>
+          <input id="app-launch-url" type="text" bind:value={form.launch_url} placeholder="https://app.example.com/login?email={{email}}" />
+        </div>
       </div>
       <div class="form-actions">
         <button class="btn btn-primary" onclick={handleCreate}>Create App</button>
@@ -192,10 +241,18 @@
       <tbody>
         {#each apps as app}
           <tr>
-            <td class="font-medium">{app.name}</td>
+            <td class="font-medium app-name-cell">
+              {#if app.icon_url}
+                <img src={app.icon_url} alt="" class="app-table-icon" />
+              {/if}
+              {app.name}
+            </td>
             <td><span class="badge badge-protocol">{app.protocol.toUpperCase()}</span></td>
             <td class="mono">{app.client_id || app.entity_id || app.bookmark_url || '\u2014'}</td>
             <td class="actions-col">
+              <button class="btn btn-outline btn-sm" onclick={() => toggleEdit(app)}>
+                {editAppId === app.id ? 'Hide Settings' : 'Settings'}
+              </button>
               <button class="btn btn-outline btn-sm" onclick={() => toggleAssignments(app.id)}>
                 {expandedAppId === app.id ? 'Hide Users' : 'Users'}
               </button>
@@ -205,6 +262,34 @@
               <button class="btn btn-destructive btn-sm" onclick={() => handleDelete(app.id)}>Delete</button>
             </td>
           </tr>
+          {#if editAppId === app.id}
+            <tr class="assignment-row">
+              <td colspan="4">
+                <div class="assignment-panel">
+                  <h4>App Settings</h4>
+                  <div class="form-fields" style="max-width: 500px;">
+                    <div class="field">
+                      <label for="edit-icon-{app.id}">Icon URL</label>
+                      <div class="icon-input-row">
+                        <input id="edit-icon-{app.id}" type="url" bind:value={editForm.icon_url} placeholder="https://example.com/icon.png" />
+                        {#if editForm.icon_url}
+                          <img src={editForm.icon_url} alt="Preview" class="icon-preview" />
+                        {/if}
+                      </div>
+                    </div>
+                    <div class="field">
+                      <label for="edit-launch-{app.id}">Launch URL <span class="hint">template &mdash; {'{{email}}'}, {'{{username}}'}, {'{{name}}'}</span></label>
+                      <input id="edit-launch-{app.id}" type="text" bind:value={editForm.launch_url} placeholder="https://app.example.com/login?email={{email}}" />
+                    </div>
+                    <div class="form-actions">
+                      <button class="btn btn-primary btn-sm" onclick={() => handleSaveSettings(app.id)}>Save</button>
+                      <button class="btn btn-outline btn-sm" onclick={() => editAppId = null}>Cancel</button>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          {/if}
           {#if expandedAppId === app.id}
             <tr class="assignment-row">
               <td colspan="4">
@@ -281,6 +366,7 @@
   .field { display: flex; flex-direction: column; gap: 0.375rem; }
   .field label { font-size: 0.875rem; font-weight: 500; color: hsl(var(--foreground)); }
   .hint { font-weight: 400; color: hsl(var(--muted-foreground)); }
+  .divider { border: none; border-top: 1px solid hsl(var(--border)); margin: 0.25rem 0; }
 
   .field input, .field select, .field textarea {
     padding: 0.5rem 0.75rem; border: 1px solid hsl(var(--input)); border-radius: var(--radius);
@@ -293,6 +379,13 @@
   }
   .field textarea { min-height: 80px; resize: vertical; }
   .field input::placeholder, .field textarea::placeholder { color: hsl(var(--muted-foreground)); }
+
+  .icon-input-row { display: flex; align-items: center; gap: 0.625rem; }
+  .icon-input-row input { flex: 1; }
+  .icon-preview {
+    width: 32px; height: 32px; border-radius: 6px; object-fit: cover; flex-shrink: 0;
+    border: 1px solid hsl(var(--border));
+  }
 
   .form-actions { display: flex; gap: 0.5rem; margin-top: 1.25rem; }
 
@@ -337,6 +430,9 @@
   .font-medium { font-weight: 500; }
   .muted { color: hsl(var(--muted-foreground)); }
   .empty-state { padding: 2rem; text-align: center; }
+
+  .app-name-cell { display: flex; align-items: center; gap: 0.5rem; }
+  .app-table-icon { width: 22px; height: 22px; border-radius: 4px; object-fit: cover; flex-shrink: 0; }
 
   .assignment-row td { background: hsl(var(--muted) / 0.3); padding: 0; }
   .assignment-panel { padding: 1rem 1.5rem; }

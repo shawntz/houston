@@ -219,11 +219,11 @@ async fn test_app_drawer_shows_apps() {
     let oidc_app = apps::create_app(&conn, &apps::CreateApp::Oidc {
         name: "My OIDC App".into(),
         redirect_uris: vec![],
-    }).unwrap();
+    }, None, None).unwrap();
     let bookmark_app = apps::create_app(&conn, &apps::CreateApp::Bookmark {
         name: "My Bookmark".into(),
         url: "https://example.com".into(),
-    }).unwrap();
+    }, None, None).unwrap();
     assignments::assign_user_to_app(&conn, &user.id, &oidc_app.id).unwrap();
     assignments::assign_user_to_app(&conn, &user.id, &bookmark_app.id).unwrap();
 

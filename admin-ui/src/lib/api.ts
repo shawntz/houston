@@ -34,6 +34,8 @@ export const listApps = () => request<any[]>('/apps');
 export const getApp = (id: string) => request<any>(`/apps/${id}`);
 export const createApp = (data: any) =>
   request<any>('/apps', { method: 'POST', body: JSON.stringify(data) });
+export const updateApp = (id: string, data: any) =>
+  request<any>(`/apps/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteApp = (id: string) =>
   request<void>(`/apps/${id}`, { method: 'DELETE' });
 export const rotateAppSecret = (id: string) =>

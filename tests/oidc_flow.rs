@@ -28,7 +28,7 @@ fn test_state_with_app() -> (axum::Router, String, String) {
     let app = apps::create_app(&conn, &apps::CreateApp::Oidc {
         name: "Test App".into(),
         redirect_uris: vec!["https://app.test/callback".into()],
-    }).unwrap();
+    }, None, None).unwrap();
     let client_id = app.client_id.clone().unwrap();
 
     // Assign user to app (required for access)
