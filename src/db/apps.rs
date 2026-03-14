@@ -15,6 +15,7 @@ pub struct App {
     pub entity_id: Option<String>,
     pub acs_url: Option<String>,
     pub name_id_format: Option<String>,
+    pub bookmark_url: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -28,6 +29,10 @@ pub enum CreateApp {
         name: String,
         entity_id: String,
         acs_url: String,
+    },
+    Bookmark {
+        name: String,
+        url: String,
     },
 }
 
@@ -47,6 +52,7 @@ fn row_to_app(row: &rusqlite::Row) -> rusqlite::Result<App> {
         entity_id: row.get("entity_id")?,
         acs_url: row.get("acs_url")?,
         name_id_format: row.get("name_id_format")?,
+        bookmark_url: row.get("bookmark_url")?,
         created_at: row.get("created_at")?,
         updated_at: row.get("updated_at")?,
     })
@@ -69,6 +75,13 @@ pub fn create_app(conn: &Connection, app: &CreateApp) -> Result<App> {
                 "INSERT INTO apps (id, name, protocol, entity_id, acs_url)
                  VALUES (?1, ?2, 'saml', ?3, ?4)",
                 params![id, name, entity_id, acs_url],
+            )?;
+        }
+        CreateApp::Bookmark { name, url } => {
+            conn.execute(
+                "INSERT INTO apps (id, name, protocol, bookmark_url)
+                 VALUES (?1, ?2, 'bookmark', ?3)",
+                params![id, name, url],
             )?;
         }
     }
@@ -102,6 +115,17 @@ pub fn list_apps(conn: &Connection) -> Result<Vec<App>> {
 pub fn delete_app(conn: &Connection, id: &str) -> Result<()> {
     conn.execute("DELETE FROM apps WHERE id = ?1", params![id])?;
     Ok(())
+}
+
+pub fn get_apps_for_user_with_details(conn: &Connection, user_id: &str) -> Result<Vec<App>> {
+    let mut stmt = conn.prepare(
+        "SELECT a.* FROM apps a
+         INNER JOIN user_app_assignments ua ON ua.app_id = a.id
+         WHERE ua.user_id = ?1
+         ORDER BY a.name ASC"
+    )?;
+    let rows = stmt.query_map(params![user_id], row_to_app)?;
+    Ok(rows.collect::<Result<Vec<_>, _>>()?)
 }
 
 #[cfg(test)]
@@ -173,5 +197,55 @@ mod tests {
         }).unwrap();
         delete_app(&conn, &app.id).unwrap();
         assert!(get_app_by_id(&conn, &app.id).unwrap().is_none());
+    }
+
+    #[test]
+    fn test_create_bookmark_app() {
+        let conn = test_db();
+        let app = create_app(&conn, &CreateApp::Bookmark {
+            name: "Notion".to_string(),
+            url: "https://notion.so".to_string(),
+        }).unwrap();
+        assert_eq!(app.protocol, "bookmark");
+        assert_eq!(app.bookmark_url.as_deref(), Some("https://notion.so"));
+        assert!(app.client_id.is_none());
+        assert!(app.entity_id.is_none());
+    }
+
+    #[test]
+    fn test_get_apps_for_user_with_details() {
+        let conn = test_db();
+        let user = crate::db::users::create_user(&conn, &crate::db::users::CreateUser {
+            username: "drawer".into(),
+            email: "drawer@test.com".into(),
+            display_name: "Drawer".into(),
+            password_hash: "hash".into(),
+            is_admin: false,
+        }).unwrap();
+
+        let app1 = create_app(&conn, &CreateApp::Oidc {
+            name: "App A".to_string(),
+            redirect_uris: vec![],
+        }).unwrap();
+        let app2 = create_app(&conn, &CreateApp::Bookmark {
+            name: "App B".to_string(),
+            url: "https://example.com".to_string(),
+        }).unwrap();
+        // A third app NOT assigned
+        create_app(&conn, &CreateApp::Saml {
+            name: "App C".to_string(),
+            entity_id: "eid".to_string(),
+            acs_url: "acs".to_string(),
+        }).unwrap();
+
+        crate::db::assignments::assign_user_to_app(&conn, &user.id, &app1.id).unwrap();
+        crate::db::assignments::assign_user_to_app(&conn, &user.id, &app2.id).unwrap();
+
+        let apps = get_apps_for_user_with_details(&conn, &user.id).unwrap();
+        assert_eq!(apps.len(), 2);
+        // Ordered by name ASC
+        assert_eq!(apps[0].name, "App A");
+        assert_eq!(apps[1].name, "App B");
+        assert_eq!(apps[1].bookmark_url.as_deref(), Some("https://example.com"));
     }
 }

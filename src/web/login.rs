@@ -108,7 +108,7 @@ async fn login_password(
         state.config.session.cookie_name, token, state.config.session.ttl_seconds
     );
 
-    let redirect_to = form.redirect_to.as_deref().unwrap_or("/admin");
+    let redirect_to = form.redirect_to.as_deref().unwrap_or("/");
 
     Response::builder()
         .status(303)
@@ -666,7 +666,7 @@ fn render_login_page(error: Option<&str>, redirect_to: Option<&str>) -> String {
                 success.classList.add('active');
                 const redirectTo = document.querySelector('input[name="redirect_to"]');
                 setTimeout(() => {{
-                    window.location.href = redirectTo ? redirectTo.value : '/admin';
+                    window.location.href = redirectTo ? redirectTo.value : '/';
                 }}, 1200);
 
             }} catch (err) {{

@@ -18,6 +18,7 @@
     redirect_uris: '',
     entity_id: '',
     acs_url: '',
+    bookmark_url: '',
   });
 
   async function load() {
@@ -36,13 +37,15 @@
       const data: any = { name: form.name, protocol: form.protocol };
       if (form.protocol === 'oidc') {
         data.redirect_uris = form.redirect_uris.split('\n').map((u: string) => u.trim()).filter(Boolean);
-      } else {
+      } else if (form.protocol === 'saml') {
         data.entity_id = form.entity_id;
         data.acs_url = form.acs_url;
+      } else if (form.protocol === 'bookmark') {
+        data.bookmark_url = form.bookmark_url;
       }
       await createApp(data);
       showCreate = false;
-      form = { name: '', protocol: 'oidc', redirect_uris: '', entity_id: '', acs_url: '' };
+      form = { name: '', protocol: 'oidc', redirect_uris: '', entity_id: '', acs_url: '', bookmark_url: '' };
       await load();
     } catch (e: any) {
       error = e.message;
@@ -110,7 +113,7 @@
   <div class="page-header-row">
     <div>
       <h1>Apps</h1>
-      <p class="page-desc">Manage OIDC and SAML applications.</p>
+      <p class="page-desc">Manage OIDC, SAML, and Bookmark applications.</p>
     </div>
     <button class="btn btn-primary" onclick={() => showCreate = !showCreate}>
       {showCreate ? 'Cancel' : '+ Register App'}
@@ -141,6 +144,7 @@
           <select id="app-protocol" bind:value={form.protocol}>
             <option value="oidc">OIDC</option>
             <option value="saml">SAML</option>
+            <option value="bookmark">Bookmark</option>
           </select>
         </div>
         {#if form.protocol === 'oidc'}
@@ -148,7 +152,7 @@
             <label for="app-redirects">Redirect URIs <span class="hint">one per line</span></label>
             <textarea id="app-redirects" bind:value={form.redirect_uris} placeholder="https://app.example.com/callback"></textarea>
           </div>
-        {:else}
+        {:else if form.protocol === 'saml'}
           <div class="field">
             <label for="app-entity">Entity ID</label>
             <input id="app-entity" type="text" bind:value={form.entity_id} placeholder="urn:example:app" />
@@ -156,6 +160,11 @@
           <div class="field">
             <label for="app-acs">ACS URL</label>
             <input id="app-acs" type="text" bind:value={form.acs_url} placeholder="https://app.example.com/saml/acs" />
+          </div>
+        {:else if form.protocol === 'bookmark'}
+          <div class="field">
+            <label for="app-bookmark-url">URL</label>
+            <input id="app-bookmark-url" type="url" bind:value={form.bookmark_url} placeholder="https://example.com" />
           </div>
         {/if}
       </div>
@@ -185,7 +194,7 @@
           <tr>
             <td class="font-medium">{app.name}</td>
             <td><span class="badge badge-protocol">{app.protocol.toUpperCase()}</span></td>
-            <td class="mono">{app.client_id || app.entity_id || '\u2014'}</td>
+            <td class="mono">{app.client_id || app.entity_id || app.bookmark_url || '\u2014'}</td>
             <td class="actions-col">
               <button class="btn btn-outline btn-sm" onclick={() => toggleAssignments(app.id)}>
                 {expandedAppId === app.id ? 'Hide Users' : 'Users'}

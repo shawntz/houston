@@ -27,6 +27,8 @@ struct CreateAppRequest {
     // SAML fields
     entity_id: Option<String>,
     acs_url: Option<String>,
+    // Bookmark fields
+    bookmark_url: Option<String>,
 }
 
 async fn list_apps(
@@ -90,7 +92,17 @@ async fn create_app(
                 acs_url,
             }
         }
-        _ => return error_response("protocol must be 'oidc' or 'saml'", 400),
+        "bookmark" => {
+            let url = match body.bookmark_url {
+                Some(u) => u,
+                None => return error_response("bookmark_url required for bookmark apps", 400),
+            };
+            apps::CreateApp::Bookmark {
+                name: body.name,
+                url,
+            }
+        }
+        _ => return error_response("protocol must be 'oidc', 'saml', or 'bookmark'", 400),
     };
 
     let db = state.db.lock().unwrap();

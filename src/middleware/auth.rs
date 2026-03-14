@@ -59,7 +59,7 @@ impl FromRequestParts<Arc<AppState>> for RequireAdmin {
     }
 }
 
-fn extract_session_token(headers: &axum::http::HeaderMap, cookie_name: &str) -> Option<String> {
+pub(crate) fn extract_session_token(headers: &axum::http::HeaderMap, cookie_name: &str) -> Option<String> {
     headers
         .get("cookie")
         .and_then(|v| v.to_str().ok())
