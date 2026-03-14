@@ -214,7 +214,7 @@
         </div>
         <div class="field">
           <label for="app-launch-url">Launch URL <span class="hint">optional &mdash; template with {'{{email}}'}, {'{{username}}'}, {'{{name}}'}</span></label>
-          <input id="app-launch-url" type="text" bind:value={form.launch_url} placeholder="https://app.example.com/login?email={{email}}" />
+          <input id="app-launch-url" type="text" bind:value={form.launch_url} placeholder={'https://app.example.com/login?email={{email}}'} />
         </div>
       </div>
       <div class="form-actions">
@@ -279,7 +279,7 @@
                     </div>
                     <div class="field">
                       <label for="edit-launch-{app.id}">Launch URL <span class="hint">template &mdash; {'{{email}}'}, {'{{username}}'}, {'{{name}}'}</span></label>
-                      <input id="edit-launch-{app.id}" type="text" bind:value={editForm.launch_url} placeholder="https://app.example.com/login?email={{email}}" />
+                      <input id="edit-launch-{app.id}" type="text" bind:value={editForm.launch_url} placeholder={'https://app.example.com/login?email={{email}}'} />
                     </div>
                     <div class="form-actions">
                       <button class="btn btn-primary btn-sm" onclick={() => handleSaveSettings(app.id)}>Save</button>
